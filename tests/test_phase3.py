@@ -666,6 +666,32 @@ with patch.dict(os.environ, {
         or "deploy" in ea_promote.get("action_taken", "").lower(),
     )
 
+# 8c-2. AUTO_PROMOTE routes status update through MCPStorageClient.update_version_status
+with patch("agents.mcp_client.MCPDeployClient.deploy_version", return_value={"deployment_id": "dep-mcp-1"}) as _deploy_mock, \
+     patch("agents.mcp_client.MCPStorageClient.update_version_status", return_value={"ok": True}) as _status_mock, \
+     patch("agents.mcp_client.MCPStorageClient._get_fallback_backend", side_effect=AssertionError("fallback should not be used")):
+    ea_promote_mcp = execute_action({
+        "decision": "AUTO_PROMOTE",
+        "v_new_id": "v_promote_mcp",
+        "v_current_id": "v_current_old",
+        "errors": [],
+    })
+    test(
+        "execute_action AUTO_PROMOTE: deploy called via MCP client",
+        _deploy_mock.call_count == 1,
+    )
+    test(
+        "execute_action AUTO_PROMOTE: status update uses MCP client method",
+        _status_mock.call_args is not None
+        and _status_mock.call_args.args == ("v_promote_mcp", "promoted"),
+        f"got {_status_mock.call_args}",
+    )
+    test(
+        "execute_action AUTO_PROMOTE: no status_update_error on MCP success",
+        "status_update_error" not in ea_promote_mcp.get("action_result", {}),
+        str(ea_promote_mcp.get("action_result", {})),
+    )
+
 # 8d. ROLLBACK — rollback to v_current
 with patch.dict(os.environ, {
     "APP_CONFIG": str(PROJECT_ROOT / "configs" / "local.json"),
@@ -1480,6 +1506,54 @@ with patch.dict(os.environ, {"STORAGE_DATA_DIR": _decision_tmp}):
 # ============================================================================
 # CLEANUP & SUMMARY
 # ============================================================================
+
+print("\n== SECTION 18: Additional Production Regression Guards ==")
+
+string_blob_scores = fetch_scores({
+    "v_new_scores": {
+        "quality_score": "8.75",
+        "score_breakdown": json.dumps({
+            "task_completion": 9.0,
+            "output_quality": 8.5,
+            "latency": 7.0,
+            "cost_efficiency": 6.5,
+        }),
+    },
+    "v_current_scores": {
+        "quality_score": "7.25",
+        "score_breakdown": json.dumps({
+            "task_completion": 8.0,
+            "output_quality": 7.5,
+            "latency": 6.0,
+            "cost_efficiency": 5.5,
+        }),
+    },
+    "errors": [],
+})
+test(
+    "fetch_scores normalizes string quality_score",
+    string_blob_scores.get("v_new_quality_score") == 8.75
+    and string_blob_scores.get("v_current_quality_score") == 7.25,
+    str(string_blob_scores),
+)
+test(
+    "fetch_scores parses JSON string score_breakdown",
+    string_blob_scores.get("v_new_breakdown", {}).get("task_completion") == 9.0
+    and string_blob_scores.get("v_current_breakdown", {}).get("output_quality") == 7.5,
+    str(string_blob_scores),
+)
+
+string_blob_compare = compare_dimensions(string_blob_scores)
+test(
+    "compare_dimensions computes overall_delta from normalized strings",
+    string_blob_compare.get("overall_delta") == 1.5,
+    str(string_blob_compare),
+)
+test(
+    "compare_dimensions computes per-dimension delta from parsed blobs",
+    string_blob_compare.get("deltas", {}).get("task_completion") == 1.0,
+    str(string_blob_compare.get("deltas", {})),
+)
 
 # Clean up temp directory
 try:

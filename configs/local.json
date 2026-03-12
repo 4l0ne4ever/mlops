@@ -5,9 +5,9 @@
         "staging_url": "http://localhost:9001"
     },
     "mcp_servers": {
-        "storage": "http://localhost:8000/sse",
-        "monitor": "http://localhost:8001/sse",
-        "deploy": "http://localhost:8002/sse"
+        "storage": "http://localhost:8000",
+        "monitor": "http://localhost:8001",
+        "deploy": "http://localhost:8002"
     },
     "orchestrator": {
         "url": "http://localhost:7000"

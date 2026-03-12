@@ -5,9 +5,9 @@
         "staging_url": "http://target-app-staging:9001"
     },
     "mcp_servers": {
-        "storage": "http://mcp-storage:8000/sse",
-        "monitor": "http://mcp-monitor:8001/sse",
-        "deploy": "http://mcp-deploy:8002/sse"
+        "storage": "http://mcp-storage:8000",
+        "monitor": "http://mcp-monitor:8001",
+        "deploy": "http://mcp-deploy:8002"
     },
     "orchestrator": {
         "url": "http://orchestrator:7000"

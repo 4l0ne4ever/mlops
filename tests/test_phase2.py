@@ -907,6 +907,54 @@ finally:
     shutil.rmtree(_mcp_tmp, ignore_errors=True)
     os.environ.pop("STORAGE_DATA_DIR", None)
 
+# Test MCP transport uses JSON-RPC 2.0 over /mcp (not /call-tool)
+mock_http = MagicMock()
+mock_http.post.return_value.status_code = 200
+mock_http.post.return_value.json.return_value = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {
+        "content": [{"type": "text", "text": json.dumps({"ok": True})}],
+    },
+}
+rpc_client = MCPStorageClient(storage_url="http://localhost:8000")
+with patch.object(rpc_client, "_get_http_client", return_value=mock_http):
+    rpc_result = rpc_client._call_mcp_tool("list_versions", {"limit": 5})
+
+rpc_call = mock_http.post.call_args
+rpc_url = rpc_call.args[0] if rpc_call and rpc_call.args else ""
+rpc_payload = rpc_call.kwargs.get("json", {}) if rpc_call else {}
+test(
+    "MCP client posts to /mcp endpoint",
+    rpc_url.endswith("/mcp"),
+    f"got {rpc_url}",
+)
+test(
+    "MCP client uses JSON-RPC 2.0 tools/call",
+    rpc_payload.get("jsonrpc") == "2.0"
+    and rpc_payload.get("method") == "tools/call"
+    and rpc_payload.get("params", {}).get("name") == "list_versions",
+    f"got {rpc_payload}",
+)
+test(
+    "MCP JSON-RPC call parses content result",
+    rpc_result == {"ok": True},
+    f"got {rpc_result}",
+)
+
+# In production, MCP failures should fail closed unless fallback is explicitly allowed
+strict_client = MCPStorageClient(storage_url="http://localhost:19999")
+with patch.dict(os.environ, {"APP_ENV": "production"}, clear=False):
+    try:
+        strict_client.get_eval_results(version_id="v-prod")
+        test("Production MCP failures do not silently fall back", False)
+    except RuntimeError as exc:
+        test(
+            "Production MCP failures do not silently fall back",
+            "fallback is disabled" in str(exc),
+            str(exc),
+        )
+
 
 # ============================================================================
 # TEST SECTION 13: Prompt Variants for Judge (P2-4)

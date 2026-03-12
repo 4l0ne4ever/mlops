@@ -16,9 +16,11 @@ env/
 # Environment variables (CRITICAL — never commit secrets)
 .env
 .env.*
-!.env.example
+# Local data (development/testing — never commit to production)
+.local-data/
 
 # IDE
+docs/
 .vscode/
 .idea/
 *.swp

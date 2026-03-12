@@ -245,7 +245,9 @@ def execute_action(state: DecisionState) -> dict[str, Any]:
                 storage_client.update_version_status(v_new_id, "promoted")
                 logger.info("Version %s status updated to 'promoted'", v_new_id)
             except Exception as exc:
-                logger.warning("Could not update version status: %s", exc)
+                errors.append(f"Could not update version status: {exc}")
+                action_result["status_update_error"] = str(exc)
+                logger.error("Could not update version status: %s", exc)
 
         except Exception as exc:
             errors.append(f"Deploy failed: {exc}")

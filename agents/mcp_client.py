@@ -1,8 +1,8 @@
 """
 MCP Client for AgentOps Agents.
 
-Provides helper functions to call MCP Storage and Monitor tools via HTTP/SSE.
-Falls back to direct backend access when MCP servers are unavailable.
+Provides helper functions to call MCP tools via Streamable-HTTP (JSON-RPC 2.0).
+Can fall back to direct backend access when MCP servers are unavailable.
 
 Usage:
     from agents.mcp_client import MCPStorageClient
@@ -11,8 +11,8 @@ Usage:
     test_cases = client.load_test_cases("eval-datasets/baseline_v1.json")
     client.save_eval_result(run_id, version_id, scores, details)
 
-The client tries MCP server first (SSE at http://localhost:{port}/sse),
-then falls back to direct local storage if unavailable.
+The client tries MCP server first (POST http://localhost:{port}/mcp),
+then falls back to direct local storage when allowed.
 """
 
 from __future__ import annotations
@@ -32,6 +32,43 @@ _MCP_JSON_RPC_HEADERS = {
     "Accept": "application/json, text/event-stream",
 }
 _RPC_VERSION = "2.0"
+
+
+def _is_truthy(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_production_runtime() -> bool:
+    env_name = (
+        os.environ.get("APP_ENV")
+        or os.environ.get("ENVIRONMENT")
+        or ""
+    ).strip().lower()
+    if env_name:
+        return env_name == "production"
+
+    app_config = os.environ.get("APP_CONFIG", "")
+    return "production" in Path(app_config).name.lower()
+
+
+def _is_fallback_allowed() -> bool:
+    """Control fallback behavior.
+
+    Rules:
+      1) If MCP_ALLOW_FALLBACK is explicitly set, honor it.
+      2) Otherwise, disable fallback in production by default (fail closed).
+    """
+    override = os.environ.get("MCP_ALLOW_FALLBACK")
+    if override is not None:
+        return _is_truthy(override)
+    return not _is_production_runtime()
+
+
+def _raise_if_fallback_disallowed(operation: str, exc: Exception) -> None:
+    if not _is_fallback_allowed():
+        raise RuntimeError(
+            f"MCP {operation} failed and fallback is disabled: {type(exc).__name__}: {exc}"
+        ) from exc
 
 
 def _parse_mcp_response(data: Any) -> Any:
@@ -66,7 +103,7 @@ class MCPStorageClient:
     Client for MCP Storage server tools.
 
     Tries to call MCP tools via the MCP server's HTTP API.
-    Falls back to direct LocalStorageBackend if server unavailable.
+    Falls back to direct LocalStorageBackend only when fallback is allowed.
     """
 
     def __init__(
@@ -209,9 +246,10 @@ class MCPStorageClient:
             )
             return result
         except Exception as exc:
-            logger.info(
-                "MCP save failed (%s), using direct backend", type(exc).__name__
+            logger.warning(
+                "MCP save failed (%s)", type(exc).__name__
             )
+            _raise_if_fallback_disallowed("save_eval_result", exc)
 
         # Fallback to direct backend
         backend = self._get_fallback_backend()
@@ -250,8 +288,9 @@ class MCPStorageClient:
                 "run_id": run_id,
             })
             return result if isinstance(result, list) else []
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("MCP get_eval_results failed (%s)", type(exc).__name__)
+            _raise_if_fallback_disallowed("get_eval_results", exc)
 
         # Fallback to direct backend
         backend = self._get_fallback_backend()
@@ -283,8 +322,9 @@ class MCPStorageClient:
                 "status_filter": status_filter,
             })
             return result if isinstance(result, list) else []
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("MCP list_versions failed (%s)", type(exc).__name__)
+            _raise_if_fallback_disallowed("list_versions", exc)
 
         # Fallback to direct backend
         backend = self._get_fallback_backend()
@@ -307,10 +347,11 @@ class MCPStorageClient:
             logger.info("Version %s status → %s via MCP", version_id, status)
             return result if isinstance(result, dict) else {"ok": True}
         except Exception as exc:
-            logger.info(
-                "MCP update_version_status failed (%s), using direct backend",
+            logger.warning(
+                "MCP update_version_status failed (%s)",
                 type(exc).__name__,
             )
+            _raise_if_fallback_disallowed("update_version_status", exc)
 
         # Fallback to direct backend
         backend = self._get_fallback_backend()
@@ -323,7 +364,7 @@ class MCPDeployClient:
     """
     Client for MCP Deploy server tools.
 
-    Tries MCP server first (http://localhost:8002/call-tool),
+    Tries MCP server first (POST http://localhost:8002/mcp),
     falls back to LocalDeployBackend.
     """
 
@@ -404,8 +445,9 @@ class MCPDeployClient:
                 result = json.loads(result)
             logger.info("Deployed %s via MCP: %s", version_id, result)
             return result if isinstance(result, dict) else {"deployment_id": str(result)}
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("MCP deploy_version failed (%s)", type(exc).__name__)
+            _raise_if_fallback_disallowed("deploy_version", exc)
         backend = self._get_fallback_backend()
         return backend.deploy_version(version_id, environment)
 
@@ -419,8 +461,9 @@ class MCPDeployClient:
                 result = json.loads(result)
             logger.info("Rolled back to %s via MCP: %s", target_version_id, result)
             return result if isinstance(result, dict) else {"deployment_id": str(result)}
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("MCP rollback_version failed (%s)", type(exc).__name__)
+            _raise_if_fallback_disallowed("rollback_version", exc)
         backend = self._get_fallback_backend()
         return backend.rollback_version(target_version_id)
 
@@ -429,7 +472,7 @@ class MCPMonitorClient:
     """
     Client for MCP Monitor server tools.
 
-    Tries MCP server first (http://localhost:8001/call-tool),
+    Tries MCP server first (POST http://localhost:8001/mcp),
     falls back to LocalMonitorBackend.
     """
 
@@ -505,8 +548,9 @@ class MCPMonitorClient:
             if isinstance(result, str):
                 result = json.loads(result)
             return result if isinstance(result, dict) else {"status": "ok"}
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("MCP push_metric failed (%s)", type(exc).__name__)
+            _raise_if_fallback_disallowed("push_metric", exc)
         backend = self._get_fallback_backend()
         return backend.push_metric(metric_name, value, dims)
 
