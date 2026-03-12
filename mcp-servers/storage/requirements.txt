@@ -1,0 +1,3 @@
+# MCP Storage Server (EC2 per-service venv)
+mcp==1.26.0
+python-dotenv==1.2.2

@@ -1,0 +1,25 @@
+{
+    "environment": "production",
+    "target_app": {
+        "production_url": "http://target-app:9000",
+        "staging_url": "http://target-app-staging:9001"
+    },
+    "mcp_servers": {
+        "storage": "http://mcp-storage:8000/sse",
+        "monitor": "http://mcp-monitor:8001/sse",
+        "deploy": "http://mcp-deploy:8002/sse"
+    },
+    "orchestrator": {
+        "url": "http://orchestrator:7000"
+    },
+    "aws": {
+        "s3_bucket": "agentops-storage",
+        "dynamodb_versions_table": "agentops-versions",
+        "dynamodb_eval_runs_table": "agentops-eval-runs",
+        "cloudwatch_namespace": "AgentOps"
+    },
+    "logging": {
+        "level": "INFO",
+        "format": "json"
+    }
+}

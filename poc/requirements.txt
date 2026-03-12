@@ -1,0 +1,7 @@
+# POC Spike (EC2 per-service venv)
+mcp==1.26.0
+langchain-mcp-adapters==0.2.1
+langgraph==1.0.10
+langgraph-prebuilt==1.0.8
+langchain-google-genai==4.2.1
+python-dotenv==1.2.2

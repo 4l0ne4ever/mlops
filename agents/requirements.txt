@@ -1,0 +1,37 @@
+# =============================================================================
+# AgentOps Agents — Requirements 
+#
+# Dependencies for eval_runner and orchestrator agents.
+# For EC2 deployment: create per-service venv and install this.
+#
+# Setup:
+#   python3.11 -m venv venv
+#   source venv/bin/activate
+#   pip install -r requirements.txt
+# =============================================================================
+
+# --- Web framework (orchestrator HTTP server) ---
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+
+# --- Google Gemini (LLM-as-judge) ---
+google-genai>=1.0.0
+
+# --- LangChain / LangGraph (agent orchestration) ---
+langchain>=0.3.0
+langgraph>=0.3.0
+langchain-core>=0.3.0
+
+# --- LangSmith (tracing/observability — P2 DoD requirement) ---
+langsmith>=0.1.0
+
+# --- MCP (client for calling MCP servers) ---
+mcp>=1.0.0
+langchain-mcp-adapters>=0.2.0
+
+# --- HTTP client (calling target-app + MCP servers) ---
+httpx>=0.27.0
+
+# --- Utilities ---
+python-dotenv>=1.0.0
+pydantic>=2.10.0

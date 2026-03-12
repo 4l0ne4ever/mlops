@@ -1,0 +1,18 @@
+{
+    "overall_regression_threshold": -0.5,
+    "critical_dimension_threshold": -1.0,
+    "auto_promote_threshold": 0.3,
+    "per_dimension_weights": {
+        "task_completion": 0.35,
+        "output_quality": 0.35,
+        "latency": 0.20,
+        "cost_efficiency": 0.10
+    },
+    "test_case_pass_threshold": 6.0,
+    "health_check_retries": 3,
+    "health_check_interval_seconds": 5,
+    "min_test_cases_required": 0.5,
+    "judge_temperature": 0.0,
+    "judge_passes": 2,
+    "judge_anomaly_threshold": 2.0
+}
