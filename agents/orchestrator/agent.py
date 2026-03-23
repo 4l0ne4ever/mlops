@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
+from agentops.settings import EVAL_DATA_DIR
+
 
 def _atomic_write(path: Path, text: str) -> None:
     """Write *text* to *path* atomically (tmp file + os.replace)."""
@@ -144,6 +146,8 @@ class OrchestratorState(TypedDict, total=False):
     run_id: str
     trigger_type: str  # "webhook" | "manual"
     webhook_payload: dict[str, Any]
+    # Optional: allow callers (e.g. experiments) to override default test suite
+    test_suite_path: str
     # After parse_change
     change_type: str  # "prompt" | "code" | "config" | "unknown"
     changed_files: list[str]
@@ -291,15 +295,23 @@ def prepare_eval(state: OrchestratorState) -> dict[str, Any]:
     change_type = state.get("change_type", "config")
     errors = list(state.get("errors", []))
 
-    # Default test suite — baseline_v1.json for all change types
-    test_suite_path = str(_PROJECT_ROOT / "eval-datasets" / "baseline_v1.json")
+    # Test suite selection
+    # Default: baseline_v1.json. Allow callers (e.g. Phase 5 experiments)
+    # to override via state["test_suite_path"].
+    test_suite_path = state.get(
+        "test_suite_path",
+        str(EVAL_DATA_DIR / "baseline_v1.json"),
+    )
 
     # Load target app URL from config
-    config_path = os.environ.get(
+    config_path_str = os.environ.get(
         "APP_CONFIG", str(_PROJECT_ROOT / "configs" / "local.json")
     )
+    config_path = Path(config_path_str)
+    if not config_path.is_absolute():
+        config_path = _PROJECT_ROOT / config_path
     try:
-        config = json.loads(Path(config_path).read_text(encoding="utf-8"))
+        config = json.loads(config_path.read_text(encoding="utf-8"))
         # Eval runs against staging (port 9001)
         target_app_url = config.get("target_app", {}).get(
             "staging_url", "http://localhost:9001"
@@ -636,6 +648,7 @@ def run_pipeline(
     trigger_type: str = "manual",
     webhook_payload: dict[str, Any] | None = None,
     run_id: str = "",
+    test_suite_path: str = "",
 ) -> dict[str, Any]:
     """
     Run the full orchestrator pipeline synchronously.
@@ -668,6 +681,8 @@ def run_pipeline(
         "trigger_type": trigger_type,
         "webhook_payload": webhook_payload or {},
     }
+    if test_suite_path:
+        initial_state["test_suite_path"] = test_suite_path
 
     # Build LangSmith tracing config
     trace_config = get_graph_config(
@@ -709,7 +724,7 @@ def create_orchestrator_app():
 
     Lambda function calls POST /trigger with the webhook payload.
     """
-    from fastapi import FastAPI, Request
+    from fastapi import Body, FastAPI
     from fastapi.responses import JSONResponse
 
     app = FastAPI(title="AgentOps Eval Orchestrator")
@@ -719,13 +734,8 @@ def create_orchestrator_app():
         return {"status": "ok", "service": "orchestrator"}
 
     @app.post("/trigger")
-    async def trigger(request: Request):
+    async def trigger(payload: dict = Body(default_factory=dict)):
         """Receive trigger from Lambda or manual invocation."""
-        try:
-            payload = await request.json()
-        except Exception:
-            payload = {}
-
         trigger_type = "webhook" if payload.get("commits") else "manual"
 
         # Run pipeline (blocking — could be made async in production)

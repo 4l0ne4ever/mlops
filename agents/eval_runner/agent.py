@@ -22,17 +22,20 @@ Edge cases handled:
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import logging
 import os
+import threading
 import time
 import uuid
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, TypedDict
 
 import httpx
+
+from agentops.settings import CONFIGS_DIR, EVAL_DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +94,7 @@ def load_test_suite(state: EvalRunnerState) -> dict[str, Any]:
 
     test_suite_path = state.get("test_suite_path", "")
     if not test_suite_path:
-        test_suite_path = str(_PROJECT_ROOT / "eval-datasets" / "baseline_v1.json")
+        test_suite_path = str(EVAL_DATA_DIR / "baseline_v1.json")
 
     errors = list(state.get("errors", []))
 
@@ -127,8 +130,8 @@ def run_test_cases(state: EvalRunnerState) -> dict[str, Any]:
         return {"test_results": [], "errors": errors}
 
     translate_url = f"{target_url.rstrip('/')}/translate"
-    max_retries = 3
-    max_concurrent = 10  # bound concurrent requests to avoid overwhelming target
+    max_retries = int(os.environ.get("EVAL_MAX_RETRIES", "3"))
+    max_concurrent = int(os.environ.get("EVAL_MAX_CONCURRENT", "10"))
 
     async def _run_single(
         client: httpx.AsyncClient,
@@ -139,6 +142,7 @@ def run_test_cases(state: EvalRunnerState) -> dict[str, Any]:
     ) -> dict[str, Any] | None:
         """Run a single test case with retry logic."""
         tc_id = tc.get("id", f"case-{i+1}")
+        eval_mode = tc.get("eval_mode", "translation")
         # Use target_lang from test case; fall back to test suite metadata, not hardcode
         resolved_target_lang = tc.get("target_lang", "")
         if not resolved_target_lang:
@@ -173,6 +177,7 @@ def run_test_cases(state: EvalRunnerState) -> dict[str, Any]:
                             "token_count": data.get("token_count", 0),
                             "status": "completed",
                             "attempts": attempt,
+                            "eval_mode": eval_mode,
                         }
                     else:
                         last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
@@ -227,22 +232,31 @@ def run_test_cases(state: EvalRunnerState) -> dict[str, Any]:
                 "status": status,
                 "error": last_error,
                 "attempts": max_retries,
+                "eval_mode": eval_mode,
             }
 
+    timeout_sec = float(os.environ.get("EVAL_TIMEOUT_SEC", "30"))
+    connect_sec = float(os.environ.get("EVAL_CONNECT_SEC", "10"))
+    batch_size = int(os.environ.get("EVAL_BATCH_SIZE", "100"))
+
     async def _run_all() -> tuple[list[dict[str, Any]], list[str]]:
-        """Run all test cases concurrently with bounded semaphore."""
+        """Run test cases with bounded concurrency. Batches cap in-flight tasks so memory stays stable on huge suites."""
         sem = asyncio.Semaphore(max_concurrent)
-        timeout = httpx.Timeout(30.0, connect=10.0)
+        timeout = httpx.Timeout(timeout_sec, connect=connect_sec)
         local_errors: list[str] = []
+        all_results: list[dict[str, Any]] = []
 
         async with httpx.AsyncClient(timeout=timeout) as client:
-            tasks = [
-                _run_single(client, sem, i, tc, local_errors)
-                for i, tc in enumerate(test_cases)
-            ]
-            results = await asyncio.gather(*tasks)
+            for start in range(0, len(test_cases), batch_size):
+                batch = test_cases[start : start + batch_size]
+                tasks = [
+                    _run_single(client, sem, start + i, tc, local_errors)
+                    for i, tc in enumerate(batch)
+                ]
+                batch_results = await asyncio.gather(*tasks)
+                all_results.extend(r for r in batch_results if r is not None)
 
-        return [r for r in results if r is not None], local_errors
+        return all_results, local_errors
 
     # Run the async event loop from sync context
     try:
@@ -271,12 +285,21 @@ def run_test_cases(state: EvalRunnerState) -> dict[str, Any]:
     return {"test_results": test_results, "errors": errors}
 
 
+def _eval_judge_max_workers() -> int:
+    return int(os.environ.get("EVAL_JUDGE_MAX_WORKERS", "5"))
+
+
+def _eval_judge_batch_size() -> int:
+    return int(os.environ.get("EVAL_JUDGE_BATCH_SIZE", "50"))
+
+
 def evaluate_outputs(state: EvalRunnerState) -> dict[str, Any]:
     """
     Node 3: Use LLM-as-judge (Gemini Flash) to score each test case output.
 
     Only evaluates test cases with status="completed" (actual_output available).
-    Skipped/failed test cases get score=0.
+    Skipped/failed test cases get score=0. Uses a bounded thread pool for judge
+    calls so large suites run faster without overwhelming the API.
     """
     from .evaluator import LLMJudgeEvaluator
 
@@ -286,27 +309,45 @@ def evaluate_outputs(state: EvalRunnerState) -> dict[str, Any]:
     if not test_results:
         return {"judge_results": [], "errors": errors}
 
-    # Initialize judge from config
-    thresholds_path = _PROJECT_ROOT / "configs" / "thresholds.json"
+    thresholds_path = CONFIGS_DIR / "thresholds.json"
     api_key = os.environ.get("GEMINI_API_KEY", "")
-    judge = LLMJudgeEvaluator.from_config(
-        thresholds_path=thresholds_path,
-        api_key=api_key,
-    )
-
-    # Single source of truth for pass_threshold: use QualityScoreCalculator
     from .quality_score import QualityScoreCalculator
     calculator = QualityScoreCalculator.from_config_file(thresholds_path)
-    pass_threshold = calculator._pass_threshold
+    pass_threshold = calculator.pass_threshold
+    run_id = state.get("run_id", "")
 
-    judge_results: list[dict[str, Any]] = []
+    # One evaluator per worker thread so genai.Client and audit logger are not shared across threads.
+    _judge_tls = threading.local()
 
+    def _get_judge() -> LLMJudgeEvaluator:
+        if not getattr(_judge_tls, "evaluator", None):
+            _judge_tls.evaluator = LLMJudgeEvaluator.from_config(
+                thresholds_path=thresholds_path,
+                api_key=api_key,
+            )
+        return _judge_tls.evaluator
+
+    results_by_index: dict[int, dict[str, Any]] = {}
+    to_eval: list[tuple[int, dict[str, Any]]] = []
     for i, tr in enumerate(test_results):
         tc_id = tr["test_case_id"]
-
+        eval_mode = tr.get("eval_mode", "translation")
+        if eval_mode in {"crash_test", "smoke_test"}:
+            results_by_index[i] = {
+                "test_case_id": tc_id,
+                "score": 0.0,
+                "accuracy": 0.0,
+                "fluency": 0.0,
+                "completeness": 0.0,
+                "reasoning": f"Eval mode '{eval_mode}' -> skipped judge scoring",
+                "issues": [f"eval_mode:{eval_mode}"],
+                "passed": False,
+                "skipped": True,
+                "anomaly": False,
+            }
+            continue
         if tr["status"] != "completed" or not tr.get("actual_output"):
-            # Skip evaluation for failed/timeout test cases
-            judge_results.append({
+            results_by_index[i] = {
                 "test_case_id": tc_id,
                 "score": 0.0,
                 "accuracy": 0.0,
@@ -316,36 +357,33 @@ def evaluate_outputs(state: EvalRunnerState) -> dict[str, Any]:
                 "issues": [tr["status"]],
                 "passed": False,
                 "skipped": True,
-            })
-            continue
+            }
+        else:
+            to_eval.append((i, tr))
 
-        logger.info(
-            "Evaluating test case %d/%d: %s",
-            i + 1,
-            len(test_results),
-            tc_id,
-        )
-
+    def _judge_one(args: tuple[int, dict[str, Any]]) -> tuple[int, dict[str, Any]]:
+        i, tr = args
+        tc_id = tr["test_case_id"]
         try:
-            result = judge.evaluate(
+            result = _get_judge().evaluate(
                 input_text=tr["input"],
                 expected_output=tr["expected_output"],
                 actual_output=tr["actual_output"],
                 source_lang=tr.get("source_lang", "vi"),
                 target_lang=tr.get("target_lang", "en"),
-                run_id=state.get("run_id", ""),
+                run_id=run_id,
                 test_case_id=tc_id,
             )
-            judge_results.append({
+            return (i, {
                 "test_case_id": tc_id,
                 **result.to_dict(),
-                "passed": result.score >= pass_threshold,
+                # Anomaly remains an audit signal and does not override
+                # score-based pass/fail classification by default.
+                "passed": (result.score >= pass_threshold) and (not result.anomaly),
                 "skipped": False,
             })
         except Exception as exc:
-            errors.append(f"Judge error for {tc_id}: {exc}")
-            logger.error("Judge evaluation failed for %s: %s", tc_id, exc)
-            judge_results.append({
+            return (i, {
                 "test_case_id": tc_id,
                 "score": 0.0,
                 "accuracy": 0.0,
@@ -356,6 +394,39 @@ def evaluate_outputs(state: EvalRunnerState) -> dict[str, Any]:
                 "passed": False,
                 "skipped": True,
             })
+
+    if to_eval:
+        judge_max_workers = _eval_judge_max_workers()
+        judge_batch_size = _eval_judge_batch_size()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=judge_max_workers) as pool:
+            for batch_start in range(0, len(to_eval), judge_batch_size):
+                batch = to_eval[batch_start : batch_start + judge_batch_size]
+                future_to_idx: dict[concurrent.futures.Future, int] = {}
+                for i, tr in batch:
+                    fut = pool.submit(_judge_one, (i, tr))
+                    future_to_idx[fut] = i
+                for fut in concurrent.futures.as_completed(future_to_idx):
+                    i = future_to_idx[fut]
+                    try:
+                        _, row = fut.result()
+                        results_by_index[i] = row
+                        if "Judge error" in row.get("reasoning", ""):
+                            errors.append(f"Judge error for {row['test_case_id']}: {row['reasoning']}")
+                            logger.error("Judge evaluation failed for %s", row["test_case_id"])
+                    except Exception as exc:
+                        errors.append(str(exc))
+                        results_by_index[i] = {
+                            "test_case_id": test_results[i]["test_case_id"],
+                            "score": 0.0,
+                            "accuracy": 0.0,
+                            "fluency": 0.0,
+                            "completeness": 0.0,
+                            "reasoning": f"Judge error: {exc}",
+                            "issues": ["judge_error"],
+                            "passed": False,
+                            "skipped": True,
+                        }
+    judge_results = [results_by_index[i] for i in range(len(test_results))]
 
     passed = sum(1 for r in judge_results if r["passed"])
     logger.info(
@@ -392,6 +463,7 @@ def aggregate_results(state: EvalRunnerState) -> dict[str, Any]:
     test_case_scores: list[float] = []
     latencies_ms: list[float] = []
     costs_usd: list[float] = []
+    pass_flags: list[bool] = []
     skipped = 0
 
     for jr in judge_results:
@@ -399,19 +471,21 @@ def aggregate_results(state: EvalRunnerState) -> dict[str, Any]:
             skipped += 1
             continue
         test_case_scores.append(jr["score"])
+        pass_flags.append(bool(jr.get("passed", False)))
         tc_id = jr["test_case_id"]
         tr = tr_map.get(tc_id, {})
         latencies_ms.append(tr.get("latency_ms", 0.0))
         costs_usd.append(tr.get("estimated_cost_usd", 0.0))
 
     # Calculate quality score
-    thresholds_path = _PROJECT_ROOT / "configs" / "thresholds.json"
+    thresholds_path = CONFIGS_DIR / "thresholds.json"
     calculator = QualityScoreCalculator.from_config_file(thresholds_path)
 
     qs_result = calculator.calculate(
         test_case_scores=test_case_scores,
         latencies_ms=latencies_ms,
         costs_usd=costs_usd,
+        pass_flags=pass_flags,
         total_cases=len(judge_results),
         skipped_cases=skipped,
         version_id=version_id,
@@ -629,11 +703,14 @@ def run_eval(
         run_id = str(uuid.uuid4())
     if not target_app_url:
         # Load from config
-        config_path = os.environ.get(
+        config_path_str = os.environ.get(
             "APP_CONFIG", str(_PROJECT_ROOT / "configs" / "local.json")
         )
+        config_path = Path(config_path_str)
+        if not config_path.is_absolute():
+            config_path = _PROJECT_ROOT / config_path
         try:
-            config = json.loads(Path(config_path).read_text(encoding="utf-8"))
+            config = json.loads(config_path.read_text(encoding="utf-8"))
             target_app_url = config.get("target_app", {}).get(
                 "staging_url", "http://localhost:9001"
             )

@@ -28,6 +28,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, TypedDict
 
+from agentops.settings import CONFIGS_DIR
+
 logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -37,8 +39,8 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 # ---------------------------------------------------------------------------
 
 _DEFAULT_THRESHOLDS = {
-    "overall_regression_threshold": -0.5,
-    "critical_dimension_threshold": -1.0,
+    "escalate_threshold": -0.5,
+    "rollback_threshold": -1.0,
     "auto_promote_threshold": 0.3,
 }
 
@@ -86,7 +88,7 @@ def _coerce_breakdown(raw: Any) -> dict[str, Any]:
 def _load_thresholds(path: str | Path | None = None) -> dict[str, Any]:
     """Load thresholds from config file, falling back to defaults."""
     if path is None:
-        path = _PROJECT_ROOT / "configs" / "thresholds.json"
+        path = CONFIGS_DIR / "thresholds.json"
     path = Path(path)
     if path.exists():
         try:
@@ -263,8 +265,17 @@ def detect_regression(state: ComparatorState) -> dict[str, Any]:
     v_new_breakdown = state.get("v_new_breakdown", {})
     v_current_breakdown = state.get("v_current_breakdown", {})
 
-    critical_threshold = thresholds.get("critical_dimension_threshold", -1.0)
-    overall_threshold = thresholds.get("overall_regression_threshold", -0.5)
+    # Backward-compatible mapping:
+    # - old: critical_dimension_threshold -> rollback_threshold
+    # - old: overall_regression_threshold -> escalate_threshold
+    critical_threshold = thresholds.get(
+        "rollback_threshold",
+        thresholds.get("critical_dimension_threshold", -1.0),
+    )
+    overall_threshold = thresholds.get(
+        "escalate_threshold",
+        thresholds.get("overall_regression_threshold", -0.5),
+    )
     promote_threshold = thresholds.get("auto_promote_threshold", 0.3)
 
     regressions: list[dict[str, Any]] = []
@@ -335,9 +346,12 @@ def generate_report(state: ComparatorState) -> dict[str, Any]:
             k: v
             for k, v in state.get("thresholds", {}).items()
             if k in (
+                "escalate_threshold",
+                "rollback_threshold",
+                "auto_promote_threshold",
+                # Backward-compatible inclusion if older configs are used
                 "overall_regression_threshold",
                 "critical_dimension_threshold",
-                "auto_promote_threshold",
             )
         },
     }

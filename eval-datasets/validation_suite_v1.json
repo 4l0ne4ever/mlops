@@ -1,0 +1,491 @@
+[
+  {
+    "id": "val-001",
+    "category": "simple_sentence",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Large language models are transforming how developers build applications.",
+    "expected_output": "Các mô hình ngôn ngữ lớn đang thay đổi cách các lập trình viên xây dựng ứng dụng."
+  },
+  {
+    "id": "val-002",
+    "category": "simple_sentence",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Tôi sẽ nộp báo cáo tiến độ vào cuối tuần này.",
+    "expected_output": "I will submit the progress report at the end of this week."
+  },
+  {
+    "id": "val-003",
+    "category": "simple_sentence",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Please review the design document before the meeting tomorrow.",
+    "expected_output": "Vui lòng xem lại tài liệu thiết kế trước cuộc họp ngày mai."
+  },
+  {
+    "id": "val-004",
+    "category": "simple_sentence",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Chúng ta cần kiểm tra lại toàn bộ hệ thống trước khi triển khai.",
+    "expected_output": "We need to recheck the entire system before deployment."
+  },
+  {
+    "id": "val-005",
+    "category": "simple_sentence",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "The deadline was extended by two weeks due to unexpected issues.",
+    "expected_output": "Hạn chót đã được gia hạn thêm hai tuần do các vấn đề bất ngờ."
+  },
+  {
+    "id": "val-006",
+    "category": "simple_sentence",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Ứng dụng mới đã nhận được nhiều phản hồi tích cực từ người dùng.",
+    "expected_output": "The new application has received a lot of positive feedback from users."
+  },
+  {
+    "id": "val-007",
+    "category": "simple_sentence",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Our team is planning a retrospective meeting next Monday.",
+    "expected_output": "Nhóm của chúng tôi đang lên kế hoạch một buổi họp retrospective vào thứ Hai tới."
+  },
+  {
+    "id": "val-008",
+    "category": "simple_sentence",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Máy chủ đã được khởi động lại để áp dụng cấu hình mới.",
+    "expected_output": "The server was restarted to apply the new configuration."
+  },
+  {
+    "id": "val-009",
+    "category": "simple_sentence",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "He decided to postpone the release after discovering a critical bug.",
+    "expected_output": "Anh ấy quyết định hoãn phát hành sau khi phát hiện một lỗi nghiêm trọng."
+  },
+  {
+    "id": "val-010",
+    "category": "simple_sentence",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Họ đang thảo luận về việc nâng cấp hệ thống vào cuối quý này.",
+    "expected_output": "They are discussing upgrading the system at the end of this quarter."
+  },
+  {
+    "id": "val-011",
+    "category": "complex_paragraph",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Continuous integration and continuous delivery have become essential practices for modern software teams. By automatically running tests and deploying changes in small, incremental batches, teams can catch regressions early, reduce manual effort, and deliver value to users more frequently.",
+    "expected_output": "Tích hợp liên tục và triển khai liên tục đã trở thành các thực tiễn thiết yếu cho các nhóm phát triển phần mềm hiện đại. Bằng cách tự động chạy kiểm thử và triển khai các thay đổi theo từng lô nhỏ, gia tăng dần, các nhóm có thể phát hiện hồi quy sớm, giảm công sức thủ công và mang lại giá trị cho người dùng thường xuyên hơn."
+  },
+  {
+    "id": "val-012",
+    "category": "complex_paragraph",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Trong bối cảnh các mô hình ngôn ngữ lớn ngày càng được sử dụng rộng rãi, việc quản lý vòng đời ứng dụng LLM trở nên quan trọng hơn bao giờ hết. Các nhóm phát triển không chỉ phải theo dõi chất lượng đầu ra, mà còn phải cân bằng giữa độ trễ, chi phí và độ ổn định khi triển khai các phiên bản mới.",
+    "expected_output": "As large language models are increasingly used in practice, managing the lifecycle of LLM applications has become more important than ever. Development teams must not only track output quality, but also balance latency, cost, and stability when deploying new versions."
+  },
+  {
+    "id": "val-013",
+    "category": "complex_paragraph",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Although unit tests can validate deterministic logic, they are not sufficient for evaluating the behavior of generative models. For these systems, we often rely on human evaluation or LLM-as-judge techniques to estimate how well the model responses align with human expectations across a diverse set of scenarios.",
+    "expected_output": "Mặc dù các bài kiểm thử đơn vị có thể xác nhận logic mang tính tất định, chúng không đủ để đánh giá hành vi của các mô hình sinh. Đối với những hệ thống này, chúng ta thường dựa vào đánh giá của con người hoặc các kỹ thuật LLM-as-judge để ước lượng mức độ phù hợp giữa phản hồi của mô hình và kỳ vọng của con người trên một tập kịch bản đa dạng."
+  },
+  {
+    "id": "val-014",
+    "category": "complex_paragraph",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Khi triển khai hệ thống đánh giá tự động cho ứng dụng LLM, việc lựa chọn bộ chỉ số phù hợp là một quyết định mang tính chiến lược. Nếu chỉ tập trung vào chất lượng đầu ra mà bỏ qua độ trễ và chi phí, hệ thống có thể mang lại trải nghiệm tốt cho người dùng nhưng lại không bền vững về mặt tài chính.",
+    "expected_output": "When deploying an automated evaluation system for an LLM application, choosing an appropriate set of metrics is a strategic decision. If we focus only on output quality and ignore latency and cost, the system may deliver a good user experience but be unsustainable from a financial perspective."
+  },
+  {
+    "id": "val-015",
+    "category": "complex_paragraph",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "From an operational perspective, the ability to automatically roll back to a previous stable version is just as important as promoting improvements. Without a reliable rollback mechanism, even a small configuration mistake can escalate into a large-scale incident that affects many users.",
+    "expected_output": "Ở góc độ vận hành, khả năng tự động quay lại phiên bản ổn định trước đó cũng quan trọng không kém so với việc đưa các cải tiến lên sản xuất. Nếu không có cơ chế rollback đáng tin cậy, chỉ một sai sót nhỏ trong cấu hình cũng có thể leo thang thành một sự cố diện rộng ảnh hưởng đến nhiều người dùng."
+  },
+  {
+    "id": "val-016",
+    "category": "complex_paragraph",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Nhiều nhóm phát triển hiện nay vẫn phải kiểm tra hồi quy cho ứng dụng LLM một cách thủ công, điều này tiêu tốn rất nhiều thời gian và dễ dẫn đến sai sót do con người. Một nền tảng AgentOps được thiết kế tốt có thể tự động hóa phần lớn quy trình này, giúp các kỹ sư tập trung vào việc phân tích các trường hợp khó thay vì lặp lại các bước kiểm tra nhàm chán.",
+    "expected_output": "Many development teams today still have to perform regression checks for LLM applications manually, which is time-consuming and prone to human error. A well-designed AgentOps platform can automate most of this process, allowing engineers to focus on analyzing difficult cases instead of repeating tedious test steps."
+  },
+  {
+    "id": "val-017",
+    "category": "complex_paragraph",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "The dashboard component of the platform is not only a visualization layer, but also a critical tool for decision making. By tracking quality score drift, deployment history, and rollback events over time, it helps stakeholders understand the real-world impact of each change to the LLM application.",
+    "expected_output": "Thành phần dashboard của nền tảng không chỉ là một lớp hiển thị, mà còn là công cụ quan trọng hỗ trợ ra quyết định. Bằng cách theo dõi độ trôi của điểm chất lượng, lịch sử triển khai và các sự kiện rollback theo thời gian, nó giúp các bên liên quan hiểu được tác động thực tế của từng thay đổi đối với ứng dụng LLM."
+  },
+  {
+    "id": "val-018",
+    "category": "complex_paragraph",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Trong luận văn này, chúng tôi tập trung vào một trường hợp nghiên cứu cụ thể là hệ thống dịch tài liệu tiếng Việt - tiếng Anh. Đây là một bài toán đủ quen thuộc để hội đồng dễ hình dung, nhưng vẫn đủ phức tạp để thể hiện rõ lợi ích của một nền tảng AgentOps trong việc phát hiện và xử lý hồi quy.",
+    "expected_output": "In this thesis, we focus on a concrete case study: a Vietnamese–English document translation system. This task is familiar enough for the committee to easily understand, yet complex enough to clearly demonstrate the benefits of an AgentOps platform for detecting and handling regressions."
+  },
+  {
+    "id": "val-019",
+    "category": "complex_paragraph",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Even when automated metrics correlate well with human judgment on average, there will always be borderline cases where a human reviewer is required. For this reason, the platform is designed to escalate suspicious changes instead of blindly trusting the quality score in every situation.",
+    "expected_output": "Ngay cả khi các chỉ số tự động có tương quan tốt với đánh giá của con người ở mức trung bình, vẫn luôn tồn tại những trường hợp biên cần có người xem xét. Vì lý do đó, nền tảng được thiết kế để escalate các thay đổi đáng ngờ thay vì mù quáng tin tưởng điểm chất lượng trong mọi tình huống."
+  },
+  {
+    "id": "val-020",
+    "category": "complex_paragraph",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Một điểm quan trọng khác là hệ thống phải luôn ưu tiên trạng thái an toàn khi gặp lỗi. Nếu bất kỳ bước nào trong pipeline đánh giá thất bại, nền tảng cần mặc định giữ nguyên phiên bản đang chạy và ghi lại đầy đủ thông tin để kỹ sư có thể điều tra sau.",
+    "expected_output": "Another important point is that the system must always prefer a safe state when errors occur. If any step in the evaluation pipeline fails, the platform should default to keeping the current running version and record enough information for engineers to investigate later."
+  },
+  {
+    "id": "val-021",
+    "category": "technical",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "The AgentOps orchestrator uses LangGraph to model the evaluation pipeline as a state graph, where each node represents a well-defined step such as loading test cases, running the target application, or aggregating scores.",
+    "expected_output": "Orchestrator của AgentOps sử dụng LangGraph để mô hình hóa pipeline đánh giá dưới dạng một đồ thị trạng thái, trong đó mỗi nút biểu diễn một bước được định nghĩa rõ ràng như tải bộ test, chạy ứng dụng đích hoặc tổng hợp điểm."
+  },
+  {
+    "id": "val-022",
+    "category": "technical",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "MCP server đóng vai trò như một lớp trừu tượng hóa giữa các tác nhân đánh giá và hạ tầng MLOps, cho phép tác nhân gọi các công cụ như lưu phiên bản prompt, ghi metric hay kích hoạt triển khai mà không cần biết chi tiết về AWS API.",
+    "expected_output": "The MCP server acts as an abstraction layer between the evaluation agents and the MLOps infrastructure, allowing agents to call tools such as saving prompt versions, writing metrics, or triggering deployments without needing to know the details of the AWS APIs."
+  },
+  {
+    "id": "val-023",
+    "category": "technical",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "By pinning the versions of the MCP SDK, LangGraph, and the Gemini client library, the project avoids sudden breaking changes that could invalidate the experimental results during the thesis timeline.",
+    "expected_output": "Bằng cách cố định phiên bản của MCP SDK, LangGraph và thư viện khách Gemini, dự án tránh được các thay đổi phá vỡ bất ngờ có thể làm sai lệch kết quả thực nghiệm trong suốt thời gian thực hiện luận văn."
+  },
+  {
+    "id": "val-024",
+    "category": "technical",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Các kết quả đánh giá được lưu trữ dưới dạng JSON có cấu trúc, bao gồm điểm chất lượng tổng hợp, điểm theo từng chiều, số lượng test case vượt ngưỡng và chi tiết cho từng test case riêng lẻ.",
+    "expected_output": "Evaluation results are stored as structured JSON, including the composite quality score, per-dimension scores, the number of test cases above the threshold, and detailed information for each individual test case."
+  },
+  {
+    "id": "val-025",
+    "category": "technical",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "The experiment runner script can trigger the full pipeline programmatically, measure wall-clock time for each scenario, and persist a summary of the outcomes for further offline analysis.",
+    "expected_output": "Script chạy thực nghiệm có thể kích hoạt toàn bộ pipeline một cách lập trình, đo thời gian thực tế cho từng kịch bản và lưu lại bản tóm tắt kết quả để phục vụ phân tích ngoại tuyến."
+  },
+  {
+    "id": "val-026",
+    "category": "technical",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Trong môi trường phát triển cục bộ, backend lưu trữ và backend triển khai sử dụng hệ thống file để mô phỏng hành vi của S3, DynamoDB và EC2, giúp việc kiểm thử và debug trở nên đơn giản hơn.",
+    "expected_output": "In the local development environment, the storage backend and deploy backend use the filesystem to simulate the behavior of S3, DynamoDB, and EC2, making testing and debugging much simpler."
+  },
+  {
+    "id": "val-027",
+    "category": "technical",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "The decision agent records each auto-promotion, rollback, or escalation event in a dedicated log group so that the research can later compute statistics such as the number of regressions caught automatically.",
+    "expected_output": "Tác nhân quyết định ghi lại mỗi sự kiện auto-promote, rollback hoặc escalate vào một nhóm log riêng, để sau này nghiên cứu có thể tính toán các thống kê như số lượng hồi quy được phát hiện tự động."
+  },
+  {
+    "id": "val-028",
+    "category": "technical",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Bộ chỉ số Quality Score kết hợp bốn chiều đánh giá khác nhau thành một giá trị duy nhất trong khoảng từ 0 đến 10, giúp đơn giản hóa việc so sánh giữa các phiên bản mô hình.",
+    "expected_output": "The Quality Score metric combines four different evaluation dimensions into a single value between 0 and 10, which simplifies comparing different model versions."
+  },
+  {
+    "id": "val-029",
+    "category": "technical",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "For the purposes of this thesis, the cost dimension is given a lower weight than correctness and latency, because the primary objective is to demonstrate reliable regression detection rather than absolute cost optimization.",
+    "expected_output": "Trong phạm vi luận văn này, chiều chi phí được gán trọng số thấp hơn so với độ chính xác và độ trễ, bởi mục tiêu chính là chứng minh khả năng phát hiện hồi quy một cách đáng tin cậy hơn là tối ưu chi phí tuyệt đối."
+  },
+  {
+    "id": "val-030",
+    "category": "technical",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Khi đánh giá các kịch bản thực nghiệm, chúng tôi sẽ so sánh kết luận của nền tảng AgentOps với đánh giá thủ công của con người để đo mức độ tương quan giữa hai cách tiếp cận.",
+    "expected_output": "When evaluating the experimental scenarios, we will compare the conclusions of the AgentOps platform with manual human assessments to measure the correlation between the two approaches."
+  },
+  {
+    "id": "val-031",
+    "category": "edge_case",
+    "eval_mode": "crash_test",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Go.",
+    "expected_output": "Đi."
+  },
+  {
+    "id": "val-032",
+    "category": "edge_case",
+    "eval_mode": "crash_test",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Đi.",
+    "expected_output": "Go."
+  },
+  {
+    "id": "val-033",
+    "category": "edge_case",
+    "eval_mode": "crash_test",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "                  ",
+    "expected_output": "                  "
+  },
+  {
+    "id": "val-034",
+    "category": "edge_case",
+    "eval_mode": "crash_test",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "     ",
+    "expected_output": "     "
+  },
+  {
+    "id": "val-035",
+    "category": "edge_case",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "This sentence contains numbers 123456 and symbols !@#$%^&*().",
+    "expected_output": "Câu này chứa các chữ số 123456 và ký hiệu !@#$%^&*()."
+  },
+  {
+    "id": "val-036",
+    "category": "edge_case",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Đây là một câu thử nghiệm với các ký tự đặc biệt: ~`!@#$%^&*()_+-=.",
+    "expected_output": "This is a test sentence with special characters: ~`!@#$%^&*()_+-=."
+  },
+  {
+    "id": "val-037",
+    "category": "edge_case",
+    "eval_mode": "crash_test",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "expected_output": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  {
+    "id": "val-038",
+    "category": "edge_case",
+    "eval_mode": "crash_test",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "expected_output": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+    "id": "val-039",
+    "category": "edge_case",
+    "eval_note": "App is expected to preserve newline structure.",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Line one.\n\n\nLine two after multiple blank lines.",
+    "expected_output": "Dòng thứ nhất.\n\n\nDòng thứ hai sau nhiều dòng trống."
+  },
+  {
+    "id": "val-040",
+    "category": "edge_case",
+    "eval_note": "App is expected to preserve newline structure.",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Dòng một.\nDòng hai.\n\nDòng ba.",
+    "expected_output": "Line one.\nLine two.\n\nLine three."
+  },
+  {
+    "id": "val-041",
+    "category": "edge_case",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "A very long paragraph with repeated content to simulate length. A very long paragraph with repeated content to simulate length. A very long paragraph with repeated content to simulate length. A very long paragraph with repeated content to simulate length. A very long paragraph with repeated content to simulate length.",
+    "expected_output": "Một đoạn văn rất dài với nội dung lặp lại để mô phỏng độ dài. Một đoạn văn rất dài với nội dung lặp lại để mô phỏng độ dài. Một đoạn văn rất dài với nội dung lặp lại để mô phỏng độ dài. Một đoạn văn rất dài với nội dung lặp lại để mô phỏng độ dài. Một đoạn văn rất dài với nội dung lặp lại để mô phỏng độ dài."
+  },
+  {
+    "id": "val-042",
+    "category": "edge_case",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Một chuỗi rất dài được lặp lại nhiều lần để kiểm tra khả năng xử lý. Một chuỗi rất dài được lặp lại nhiều lần để kiểm tra khả năng xử lý. Một chuỗi rất dài được lặp lại nhiều lần để kiểm tra khả năng xử lý. Một chuỗi rất dài được lặp lại nhiều lần để kiểm tra khả năng xử lý. Một chuỗi rất dài được lặp lại nhiều lần để kiểm tra khả năng xử lý.",
+    "expected_output": "A very long string repeated many times to test handling. A very long string repeated many times to test handling. A very long string repeated many times to test handling. A very long string repeated many times to test handling. A very long string repeated many times to test handling."
+  },
+  {
+    "id": "val-043",
+    "category": "edge_case",
+    "eval_mode": "crash_test",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Mixed languages: Xin chào, this is a bilingual sentence.",
+    "expected_output": "Ngôn ngữ hỗn hợp: Xin chào, đây là một câu song ngữ."
+  },
+  {
+    "id": "val-044",
+    "category": "edge_case",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Câu này chứa từ tiếng Anh như \"deployment\" và \"rollback\" xen lẫn.",
+    "expected_output": "This sentence contains English words like \"deployment\" and \"rollback\" mixed in."
+  },
+  {
+    "id": "val-045",
+    "category": "edge_case",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Emoji test 😊🚀🔥 with normal text around it.",
+    "expected_output": "Thử nghiệm emoji 😊🚀🔥 với văn bản bình thường xung quanh."
+  },
+  {
+    "id": "val-046",
+    "category": "edge_case",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Thử nghiệm với emoji 😄📊 để xem mô hình xử lý như thế nào.",
+    "expected_output": "Experiment with emojis 😄📊 to see how the model handles them."
+  },
+  {
+    "id": "val-047",
+    "category": "edge_case",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Whitespace-only input should not crash the system.",
+    "expected_output": "Đầu vào chỉ chứa khoảng trắng không được làm hệ thống bị lỗi."
+  },
+  {
+    "id": "val-048",
+    "category": "edge_case",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Đầu vào rỗng là một trường hợp biên quan trọng trong mọi hệ thống.",
+    "expected_output": "Empty input is an important edge case in every system."
+  },
+  {
+    "id": "val-049",
+    "category": "edge_case",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Text\nwith\nmany\nshort\nlines.",
+    "expected_output": "Văn bản\nvới\nnhiều\ndòng\nngắn."
+  },
+  {
+    "id": "val-050",
+    "category": "edge_case",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Văn bản\nđược\nxuống dòng\nliên tục.",
+    "expected_output": "Text\nis\nbroken into\nmany lines."
+  },
+  {
+    "id": "val-051",
+    "category": "technical",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "ERROR [2026-03-19 10:15:42] Connection timeout after 30s while calling https://api.example.com/v1/translate",
+    "expected_output": "LỖI [2026-03-19 10:15:42] Hết thời gian chờ kết nối sau 30 giây khi gọi https://api.example.com/v1/translate"
+  },
+  {
+    "id": "val-052",
+    "category": "technical",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Cảnh báo: Không thể ghi vào bộ nhớ đệm (permission denied). Sẽ thử lại sau 10 giây.",
+    "expected_output": "Warning: Unable to write to cache (permission denied). Will retry after 10 seconds."
+  },
+  {
+    "id": "val-053",
+    "category": "technical",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "INFO Retrying request (attempt 2/3) due to HTTP 503 Service Unavailable",
+    "expected_output": "INFO Đang thử lại yêu cầu (lần 2/3) do lỗi HTTP 503 Dịch vụ không sẵn sàng"
+  },
+  {
+    "id": "val-054",
+    "category": "technical",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Lỗi: Không tìm thấy khóa 'target_app' trong APP_CONFIG. Hãy kiểm tra cấu hình.",
+    "expected_output": "Error: Missing key 'target_app' in APP_CONFIG. Please check the configuration."
+  },
+  {
+    "id": "val-055",
+    "category": "technical",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Stack trace: ValueError: invalid JSON at line 12 column 4",
+    "expected_output": "Dấu vết ngăn xếp: ValueError: JSON không hợp lệ tại dòng 12 cột 4"
+  },
+  {
+    "id": "val-056",
+    "category": "complex_paragraph",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Subject: Request for a meeting regarding the quarterly evaluation\n\nDear Ms. Lan,\n\nI hope you are doing well. I would like to request a meeting next Tuesday to review the quarterly evaluation results.\n\nSincerely,\nJohn",
+    "expected_output": "Tiêu đề: Đề nghị họp để trao đổi về đánh giá quý\n\nKính gửi cô Lan,\n\nTôi hy vọng cô đang có một ngày tốt lành. Tôi xin đề nghị một cuộc họp vào thứ Ba tuần tới để xem xét kết quả đánh giá quý.\n\nTrân trọng,\nJohn"
+  },
+  {
+    "id": "val-057",
+    "category": "complex_paragraph",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Kính gửi anh Minh,\n\nTôi xin phép xác nhận rằng chúng tôi đã nhận được báo cáo đánh giá. Vui lòng cho chúng tôi biết thời gian họp phù hợp trong tuần này.\n\nTrân trọng,\nBình",
+    "expected_output": "Dear Mr. Minh,\n\nI would like to confirm that we have received the evaluation report. Please let us know a suitable meeting time this week.\n\nSincerely,\nBinh"
+  },
+  {
+    "id": "val-058",
+    "category": "complex_paragraph",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Kính gửi Nhóm Triển khai,\n\nKhi chúng ta chuẩn bị cho việc phát hành lên môi trường production, nhờ anh/chị xác nhận giúp liệu môi trường staging đã sẵn sàng hay chưa và tất cả bí mật (secrets) cần thiết đã được cấp phát đầy đủ chưa.\n\nXin cảm ơn.\nA",
+    "expected_output": "Dear Deployment Team,\n\nAs we prepare for the release to production, could you please confirm whether the staging environment is ready and whether all required secrets have been provisioned?\n\nThank you.\nA"
+  },
+  {
+    "id": "val-059",
+    "category": "complex_paragraph",
+    "source_lang": "vi",
+    "target_lang": "en",
+    "input": "Kính gửi Quý khách,\n\nChúng tôi xin thông báo hệ thống sẽ được bảo trì vào lúc 01:00 sáng Chủ nhật. Xin vui lòng không thực hiện giao dịch trong thời gian bảo trì.\n\nTrân trọng,\nĐội Hỗ trợ",
+    "expected_output": "Dear Customer,\n\nWe would like to inform you that the system will undergo maintenance at 1:00 AM on Sunday. Please refrain from performing transactions during the maintenance window.\n\nSincerely,\nSupport Team"
+  },
+  {
+    "id": "val-060",
+    "category": "complex_paragraph",
+    "source_lang": "en",
+    "target_lang": "vi",
+    "input": "Subject: Invoice Payment Reminder\n\nHello,\n\nThis is a reminder that invoice #INV-1042 is due on Friday. Please process the payment at your earliest convenience.\n\nBest regards,\nAccounts Team",
+    "expected_output": "Tiêu đề: Nhắc thanh toán hóa đơn\n\nXin chào,\n\nĐây là lời nhắc rằng hóa đơn #INV-1042 đến hạn vào thứ Sáu. Vui lòng tiến hành thanh toán sớm nhất có thể.\n\nTrân trọng,\nBộ phận Kế toán"
+  }
+]

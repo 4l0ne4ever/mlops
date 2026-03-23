@@ -131,7 +131,7 @@ test(
     _comparator_imported and len(_DEFAULT_THRESHOLDS) == 3,
 )
 
-for key in ("overall_regression_threshold", "critical_dimension_threshold", "auto_promote_threshold"):
+for key in ("escalate_threshold", "rollback_threshold", "auto_promote_threshold"):
     test(
         f"Default threshold: {key}",
         _comparator_imported and key in _DEFAULT_THRESHOLDS,
@@ -147,17 +147,17 @@ print("\n== SECTION 2: Comparator — _load_thresholds ==")
 thresholds = _load_thresholds() if _comparator_imported else {}
 test(
     "Load thresholds from configs/thresholds.json",
-    "overall_regression_threshold" in thresholds,
+    "escalate_threshold" in thresholds,
 )
 test(
-    "overall_regression_threshold = -0.5",
-    thresholds.get("overall_regression_threshold") == -0.5,
-    f"got {thresholds.get('overall_regression_threshold')}",
+    "escalate_threshold = -0.5",
+    thresholds.get("escalate_threshold") == -0.5,
+    f"got {thresholds.get('escalate_threshold')}",
 )
 test(
-    "critical_dimension_threshold = -1.0",
-    thresholds.get("critical_dimension_threshold") == -1.0,
-    f"got {thresholds.get('critical_dimension_threshold')}",
+    "rollback_threshold = -1.0",
+    thresholds.get("rollback_threshold") == -1.0,
+    f"got {thresholds.get('rollback_threshold')}",
 )
 test(
     "auto_promote_threshold = 0.3",
@@ -213,7 +213,7 @@ test(
 )
 test(
     "fetch_scores populates thresholds",
-    "overall_regression_threshold" in result_fs.get("thresholds", {}),
+    "escalate_threshold" in result_fs.get("thresholds", {}),
 )
 test(
     "fetch_scores v_new_breakdown has 4 dims",
@@ -277,7 +277,7 @@ test(
 )
 test(
     "Report has thresholds_used",
-    "overall_regression_threshold" in report.get("thresholds_used", {}),
+    "escalate_threshold" in report.get("thresholds_used", {}),
 )
 
 
@@ -501,7 +501,7 @@ report_input = {
     "regressions": [],
     "improvements": [{"dimension": "task_completion", "old": 7.0, "new": 8.5, "delta": 1.5}],
     "dimension_deltas": {"task_completion": 1.5, "output_quality": 1.0, "latency": 0.5, "cost_efficiency": 0.5},
-    "thresholds_used": {"overall_regression_threshold": -0.5, "critical_dimension_threshold": -1.0, "auto_promote_threshold": 0.3},
+    "thresholds_used": {"escalate_threshold": -0.5, "rollback_threshold": -1.0, "auto_promote_threshold": 0.3},
 }
 rr_state: DecisionState = {"comparison_report": report_input, "errors": []}
 rr_result = receive_report(rr_state)

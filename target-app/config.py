@@ -13,17 +13,19 @@ import os
 from pathlib import Path
 from typing import Any
 
+from agentops.settings import PROJECT_ROOT, CONFIGS_DIR, DEFAULT_APP_CONFIG_PATH as GLOBAL_APP_CONFIG_PATH
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Defaults / fallbacks
 # ---------------------------------------------------------------------------
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_PROJECT_ROOT = PROJECT_ROOT
 
-DEFAULT_PROMPT_TEMPLATE_PATH = _PROJECT_ROOT / "configs" / "prompt_template.json"
-DEFAULT_MODEL_CONFIG_PATH = _PROJECT_ROOT / "configs" / "model_config.json"
-DEFAULT_APP_CONFIG_PATH = _PROJECT_ROOT / "configs" / "local.json"
+DEFAULT_PROMPT_TEMPLATE_PATH = CONFIGS_DIR / "prompt_template.json"
+DEFAULT_MODEL_CONFIG_PATH = CONFIGS_DIR / "model_config.json"
+DEFAULT_APP_CONFIG_PATH = GLOBAL_APP_CONFIG_PATH
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +128,14 @@ class AppConfig:
     def _load_json(path: str) -> dict[str, Any]:
         """Load a JSON file, return empty dict on failure."""
         file_path = Path(path)
+        if not file_path.is_absolute():
+            # Treat relative paths as repo-relative configs.
+            # This avoids cwd-dependent failures when running services from EC2.
+            if (CONFIGS_DIR / file_path).exists():
+                file_path = CONFIGS_DIR / file_path
+            else:
+                # Fallback: resolve against PROJECT_ROOT for APP_CONFIG-like paths.
+                file_path = PROJECT_ROOT / file_path
         if not file_path.exists():
             logger.warning("Config file not found: %s — using defaults", path)
             return {}

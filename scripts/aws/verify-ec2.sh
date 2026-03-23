@@ -35,8 +35,17 @@ SSH_KEY="${2:-~/.ssh/agentops-key.pem}"
 EC2_USER="ubuntu"
 SSH_CMD="ssh -i $SSH_KEY -o StrictHostKeyChecking=no $EC2_USER@$EC2_IP"
 
+# Shared ports (keep in sync with agentops.settings defaults)
+TARGET_APP_PROD_PORT="${TARGET_APP_PROD_PORT:-9000}"
+TARGET_APP_STAGING_PORT="${TARGET_APP_STAGING_PORT:-9001}"
+MCP_STORAGE_PORT="${MCP_STORAGE_PORT:-8000}"
+MCP_MONITOR_PORT="${MCP_MONITOR_PORT:-8001}"
+MCP_DEPLOY_PORT="${MCP_DEPLOY_PORT:-8002}"
+
 PASS=0
 FAIL=0
+SERVICE_ACTIVE_RETRIES="${SERVICE_ACTIVE_RETRIES:-8}"
+SERVICE_ACTIVE_SLEEP_SEC="${SERVICE_ACTIVE_SLEEP_SEC:-3}"
 
 check() {
     local name="$1"
@@ -59,9 +68,16 @@ echo "=============================================="
 echo ""
 echo "[1/5] Systemd services"
 
-SERVICES=(agentops-target-prod agentops-target-staging agentops-mcp-storage agentops-mcp-monitor agentops-mcp-deploy)
+SERVICES=(agentops-target-prod agentops-target-staging agentops-mcp-storage agentops-mcp-monitor agentops-mcp-deploy agentops-orchestrator agentops-dashboard)
 for svc in "${SERVICES[@]}"; do
-    STATUS=$($SSH_CMD "systemctl is-active $svc 2>/dev/null" || echo "inactive")
+    STATUS=""
+    for ((i=1; i<=SERVICE_ACTIVE_RETRIES; i++)); do
+        STATUS=$($SSH_CMD "systemctl is-active $svc 2>/dev/null" || echo "inactive")
+        if [ "$STATUS" = "active" ]; then
+            break
+        fi
+        sleep "$SERVICE_ACTIVE_SLEEP_SEC"
+    done
     check "$svc = $STATUS" "$([ "$STATUS" = "active" ] && echo 0 || echo 1)"
 done
 
@@ -69,20 +85,28 @@ done
 echo ""
 echo "[2/5] Health endpoints"
 
-# Target app production
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://$EC2_IP:9000/health" 2>/dev/null || echo "000")
-check "Target App Production (9000): $HTTP_CODE" "$([ "$HTTP_CODE" = "200" ] && echo 0 || echo 1)"
+# Target app production (check from inside EC2 to avoid local network port filtering)
+HTTP_CODE=$($SSH_CMD "curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:$TARGET_APP_PROD_PORT/health 2>/dev/null || echo 000")
+check "Target App Production ($TARGET_APP_PROD_PORT): $HTTP_CODE" "$([ "$HTTP_CODE" = "200" ] && echo 0 || echo 1)"
 
-# Target app staging
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://$EC2_IP:9001/health" 2>/dev/null || echo "000")
-check "Target App Staging (9001): $HTTP_CODE" "$([ "$HTTP_CODE" = "200" ] && echo 0 || echo 1)"
+# Target app staging (check from inside EC2 to avoid local network port filtering)
+HTTP_CODE=$($SSH_CMD "curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:$TARGET_APP_STAGING_PORT/health 2>/dev/null || echo 000")
+check "Target App Staging ($TARGET_APP_STAGING_PORT): $HTTP_CODE" "$([ "$HTTP_CODE" = "200" ] && echo 0 || echo 1)"
 
-# MCP servers SSE endpoints
-for port in 8000 8001 8002; do
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://$EC2_IP:$port/sse" 2>/dev/null || echo "000")
-    # SSE returns 200 (streaming) — any non-000 means reachable
-    check "MCP Server ($port) reachable: $HTTP_CODE" "$([ "$HTTP_CODE" != "000" ] && echo 0 || echo 1)"
+# MCP servers /mcp endpoints (streamable-http)
+for port in "$MCP_STORAGE_PORT" "$MCP_MONITOR_PORT" "$MCP_DEPLOY_PORT"; do
+    HTTP_CODE=$($SSH_CMD "curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:$port/mcp 2>/dev/null || echo 000")
+    # For /mcp, 200 = OK, 405/406 also indicate the endpoint exists but method/header may be off.
+    if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "405" ] || [ "$HTTP_CODE" = "406" ]; then
+        check "MCP Server ($port) /mcp reachable: $HTTP_CODE" "0"
+    else
+        check "MCP Server ($port) /mcp reachable: $HTTP_CODE" "1"
+    fi
 done
+
+# Dashboard via nginx root
+HTTP_CODE=$($SSH_CMD "curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1/ 2>/dev/null || echo 000")
+check "Dashboard via nginx (/): $HTTP_CODE" "$([ "$HTTP_CODE" = "200" ] && echo 0 || echo 1)"
 
 # --- 3. Memory usage ---
 echo ""

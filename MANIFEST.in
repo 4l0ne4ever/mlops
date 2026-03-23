@@ -1,0 +1,11 @@
+# Dependencies are read at build time by setuptools.dynamic; include in sdist
+# so that pip install from sdist (e.g. PyPI) resolves deps correctly.
+include requirements.txt
+include README.md
+
+# Package data needed for local operation (configs + eval datasets)
+recursive-include configs *.json
+recursive-include eval-datasets *.json
+
+recursive-include agentops/configs *.json
+recursive-include agentops/eval_datasets *.json

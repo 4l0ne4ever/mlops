@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentops-platform"
+version = "0.1.0"
+description = "AgentOps platform for agentic MLOps (orchestrator, MCP servers, target app, and dashboard backend)."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "Duong Cong Thuyet" }
+]
+dynamic = ["dependencies"]
+
+[project.scripts]
+agentops = "agentops.cli:main"
+
+[project.optional-dependencies]
+targets = [
+  "fastapi~=0.135.1",
+  "uvicorn[standard]~=0.41.0",
+  "google-genai~=1.66.0",
+]
+mcp = [
+  "mcp~=1.26.0",
+  "langchain-mcp-adapters~=0.2.1",
+]
+aws = [
+  "boto3~=1.42.63",
+]
+
+[tool.setuptools]
+include-package-data = true
+# Explicit list so hyphenated dirs (target-app, mcp-servers) are included via
+# package_dir. find would only see dir names and would not match target_app* / mcp_servers*.
+packages = [
+  "agents",
+  "agents.comparator",
+  "agents.decision",
+  "agents.eval_runner",
+  "agents.orchestrator",
+  "target_app",
+  "mcp_servers",
+  "mcp_servers.storage",
+  "mcp_servers.monitor",
+  "mcp_servers.deploy",
+  "agentops",
+  "agentops.core",
+  "agentops.mcp",
+  "agentops.backends",
+  "agentops.configs",
+  "agentops.eval_datasets",
+  "agentops.target_app",
+]
+
+[tool.setuptools.dynamic]
+dependencies = { file = "requirements.txt" }
+
+[tool.setuptools.package-dir]
+agents = "agents"
+target_app = "target-app"
+mcp_servers = "mcp-servers"
+

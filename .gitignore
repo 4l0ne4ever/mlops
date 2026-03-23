@@ -20,7 +20,6 @@ env/
 .local-data/
 
 # IDE
-docs/
 .vscode/
 .idea/
 *.swp
@@ -53,5 +52,4 @@ eval-results/
 tmp/
 *.tmp
 
-docs/
 .local-data/

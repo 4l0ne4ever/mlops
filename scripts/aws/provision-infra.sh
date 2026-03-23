@@ -31,7 +31,7 @@ else
     exit 1
 fi
 # Disable AWS CLI pager to prevent interactive blocking
-export AWS_PAGER=\"\"
+export AWS_PAGER=""
 REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 S3_BUCKET="agentops-storage"
 VERSIONS_TABLE="agentops-versions"

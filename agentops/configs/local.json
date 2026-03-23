@@ -1,0 +1,26 @@
+{
+    "environment": "local",
+    "target_app": {
+        "production_url": "http://localhost:9000",
+        "staging_url": "http://localhost:9001"
+    },
+    "mcp_servers": {
+        "storage": "http://localhost:8000",
+        "monitor": "http://localhost:8001",
+        "deploy": "http://localhost:8002"
+    },
+    "orchestrator": {
+        "url": "http://localhost:7000"
+    },
+    "aws": {
+        "s3_bucket": "agentops-storage",
+        "dynamodb_versions_table": "agentops-versions",
+        "dynamodb_eval_runs_table": "agentops-eval-runs",
+        "cloudwatch_namespace": "AgentOps"
+    },
+    "logging": {
+        "level": "DEBUG",
+        "format": "json"
+    }
+}
+

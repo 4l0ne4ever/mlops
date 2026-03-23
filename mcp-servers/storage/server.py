@@ -1,19 +1,26 @@
 """
 MCP Server: Storage — manages prompt versions and eval results.
 
-Exposes 5 MCP tools via SSE transport:
+Exposes 5 MCP tools via the **streamable-http** `/mcp` endpoint:
   - save_prompt_version: upload prompt template, create version record
   - get_prompt_version: retrieve prompt template by version_id
   - list_versions: list all versions (newest first)
   - save_eval_result: save evaluation results
   - get_eval_results: retrieve eval results by version_id or run_id
 
-Run:
+Runtime:
     python -m mcp_servers.storage.server
     # or from project root:
     python mcp-servers/storage/server.py
 
-SSE endpoint: http://localhost:8000/sse
+Streamable HTTP endpoint:
+    POST http://localhost:8000/mcp
+
+Use the streamable-http handshake:
+  1) POST `initialize`
+  2) Read `mcp-session-id` header
+  3) POST `notifications/initialized`
+  4) POST `tools/call`
 """
 
 from __future__ import annotations
@@ -28,28 +35,36 @@ from typing import Any
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
+# Ensure project root (with agentops package) is importable when running this
+# file directly (e.g. `python mcp-servers/storage/server.py`).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
+from agentops.settings import PROJECT_ROOT, STORAGE_DATA_DIR, MCP_STORAGE_PORT
+
 # ---------------------------------------------------------------------------
 # Setup
 # ---------------------------------------------------------------------------
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_PROJECT_ROOT = PROJECT_ROOT
 _env_path = _PROJECT_ROOT / ".env"
 if _env_path.exists():
     load_dotenv(_env_path)
 
-_local_config_path = os.environ.get(
+_app_config_path = os.environ.get(
     "APP_CONFIG", str(_PROJECT_ROOT / "configs" / "local.json")
 )
+_app_config_file = Path(_app_config_path)
+if not _app_config_file.is_absolute():
+    _app_config_file = _PROJECT_ROOT / _app_config_file
+_local_config: dict[str, Any] = {}
 try:
-    _local_config = json.loads(Path(_local_config_path).read_text(encoding="utf-8"))
+    _local_config = json.loads(_app_config_file.read_text(encoding="utf-8"))
 except (FileNotFoundError, json.JSONDecodeError) as _exc:
     logging.getLogger(__name__).warning("Config load failed (%s), using defaults", _exc)
     _local_config = {}
 
 # Data directory — local filesystem for dev, S3/DynamoDB on EC2
-_data_dir = os.environ.get(
-    "STORAGE_DATA_DIR", str(_PROJECT_ROOT / ".local-data")
-)
+_data_dir = str(STORAGE_DATA_DIR)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,7 +77,7 @@ logger = logging.getLogger("agentops.mcp-storage")
 # Backend
 # ---------------------------------------------------------------------------
 
-from storage_backend import LocalStorageBackend
+from mcp_servers.storage.storage_backend import LocalStorageBackend
 
 _backend = LocalStorageBackend(data_dir=_data_dir)
 
@@ -70,7 +85,7 @@ _backend = LocalStorageBackend(data_dir=_data_dir)
 # MCP Server
 # ---------------------------------------------------------------------------
 
-_port = int(os.environ.get("MCP_STORAGE_PORT", "8000"))
+_port = MCP_STORAGE_PORT
 mcp = FastMCP("agentops-storage", port=_port)
 
 

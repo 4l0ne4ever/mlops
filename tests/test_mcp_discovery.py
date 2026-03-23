@@ -42,15 +42,15 @@ def main():
 
     print("All 3 MCP servers running.")
 
-    # Discover tools
+    # Discover tools via streamable-http /mcp endpoints
     async def discover():
         from langchain_mcp_adapters.client import MultiServerMCPClient
 
         client = MultiServerMCPClient(
             {
-                "storage": {"url": "http://localhost:8000/sse", "transport": "sse"},
-                "monitor": {"url": "http://localhost:8001/sse", "transport": "sse"},
-                "deploy": {"url": "http://localhost:8002/sse", "transport": "sse"},
+                "storage": {"url": "http://localhost:8000/mcp", "transport": "streamable-http"},
+                "monitor": {"url": "http://localhost:8001/mcp", "transport": "streamable-http"},
+                "deploy": {"url": "http://localhost:8002/mcp", "transport": "streamable-http"},
             }
         )
         tools = await client.get_tools()

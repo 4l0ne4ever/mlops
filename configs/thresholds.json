@@ -1,6 +1,6 @@
 {
-    "overall_regression_threshold": -0.5,
-    "critical_dimension_threshold": -1.0,
+    "escalate_threshold": -0.5,
+    "rollback_threshold": -1.0,
     "auto_promote_threshold": 0.3,
     "per_dimension_weights": {
         "task_completion": 0.35,
@@ -14,5 +14,6 @@
     "min_test_cases_required": 0.5,
     "judge_temperature": 0.0,
     "judge_passes": 2,
-    "judge_anomaly_threshold": 2.0
+    "judge_anomaly_threshold": 2.0,
+    "judge_prompt_variant": "A"
 }

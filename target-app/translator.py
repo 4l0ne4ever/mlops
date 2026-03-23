@@ -8,6 +8,7 @@ Handles prompt construction, API calls, error handling, and cost estimation.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from typing import Optional
 
@@ -19,12 +20,23 @@ from config import AppConfig
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Cost estimation (approximate, Gemini Flash pricing as of 2025)
+# Cost estimation — configurable via env so rates can be updated without code changes
 # ---------------------------------------------------------------------------
 
-# Gemini 2.0 Flash: $0.10 / 1M input tokens, $0.40 / 1M output tokens
-_INPUT_COST_PER_TOKEN = 0.10 / 1_000_000
-_OUTPUT_COST_PER_TOKEN = 0.40 / 1_000_000
+def _cost_per_token(env_key: str, default_per_1m: float) -> float:
+    """Parse cost per 1M tokens from env (e.g. GEMINI_INPUT_COST_PER_1M=0.10)."""
+    raw = os.environ.get(env_key)
+    if raw is None:
+        return default_per_1m / 1_000_000
+    try:
+        return float(raw) / 1_000_000
+    except ValueError:
+        return default_per_1m / 1_000_000
+
+
+# Defaults: Gemini 2.0 Flash approximate pricing (USD per 1M tokens)
+INPUT_COST_PER_TOKEN = _cost_per_token("GEMINI_INPUT_COST_PER_1M", 0.10)
+OUTPUT_COST_PER_TOKEN = _cost_per_token("GEMINI_OUTPUT_COST_PER_1M", 0.40)
 
 
 class TranslationService:
@@ -113,8 +125,8 @@ class TranslationService:
             output_tokens = getattr(usage, "candidates_token_count", 0) or 0
             token_count = input_tokens + output_tokens
             estimated_cost = (
-                input_tokens * _INPUT_COST_PER_TOKEN
-                + output_tokens * _OUTPUT_COST_PER_TOKEN
+                input_tokens * INPUT_COST_PER_TOKEN
+                + output_tokens * OUTPUT_COST_PER_TOKEN
             )
 
         logger.info(

@@ -56,6 +56,7 @@ class DimensionScore:
 class QualityScoreResult:
     """Complete quality score output with breakdown."""
     quality_score: float
+    is_valid: bool
     breakdown: dict[str, dict[str, float]]
     metadata: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
@@ -69,9 +70,11 @@ class QualityScoreResult:
                     "score": round(info["score"], 3),
                     "weight": info["weight"],
                     "raw_value": info.get("raw_value", 0),
+                    **({"no_data": True} if info.get("no_data") else {}),
                 }
                 for name, info in self.breakdown.items()
             },
+            "is_valid": self.is_valid,
             "metadata": self.metadata,
             "warnings": self.warnings,
         }
@@ -111,6 +114,11 @@ class QualityScoreCalculator:
             raise ValueError(
                 f"Dimension weights must sum to 1.0, got {total:.3f}"
             )
+
+    @property
+    def pass_threshold(self) -> float:
+        """Public pass threshold used to classify individual test-case pass/fail."""
+        return self._pass_threshold
 
     @classmethod
     def from_config_file(cls, config_path: str | Path) -> "QualityScoreCalculator":
@@ -162,6 +170,7 @@ class QualityScoreCalculator:
         test_case_scores: list[float],
         latencies_ms: list[float],
         costs_usd: list[float],
+        pass_flags: list[bool] | None = None,
         total_cases: int | None = None,
         skipped_cases: int = 0,
         version_id: str = "",
@@ -185,6 +194,7 @@ class QualityScoreCalculator:
         """
         warnings: list[str] = []
 
+        is_valid = True
         if total_cases is None:
             total_cases = len(test_case_scores) + skipped_cases
 
@@ -197,16 +207,26 @@ class QualityScoreCalculator:
         if total_cases > 0:
             run_fraction = actual_run / total_cases
             if run_fraction < self._min_test_cases_required:
+                is_valid = False
                 warnings.append(
                     f"Only {actual_run}/{total_cases} "
                     f"({run_fraction:.0%}) test cases completed. "
                     f"Minimum required: {self._min_test_cases_required:.0%}. "
                     f"Eval run may need human review."
                 )
+        else:
+            is_valid = False
 
         # --- Dimension 1: Task Completion Rate ---
         if actual_run > 0:
-            passed = sum(1 for s in test_case_scores if s >= self._pass_threshold)
+            if pass_flags is not None:
+                if len(pass_flags) != actual_run:
+                    raise ValueError(
+                        f"pass_flags length ({len(pass_flags)}) must match test_case_scores length ({actual_run})"
+                    )
+                passed = sum(1 for pf in pass_flags if pf)
+            else:
+                passed = sum(1 for s in test_case_scores if s >= self._pass_threshold)
             pass_rate_pct = (passed / actual_run) * 100.0
         task_completion_score = self.normalize_task_completion(pass_rate_pct)
 
@@ -289,6 +309,7 @@ class QualityScoreCalculator:
 
         return QualityScoreResult(
             quality_score=quality_score,
+            is_valid=is_valid,
             breakdown=breakdown,
             metadata=metadata,
             warnings=warnings,

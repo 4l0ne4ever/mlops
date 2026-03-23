@@ -1,7 +1,7 @@
 """
 MCP Server: Deploy — manages deployment and rollback of versions.
 
-Exposes 3 MCP tools via SSE transport:
+Exposes 3 MCP tools via the **streamable-http** `/mcp` endpoint:
   - deploy_version: deploy a version to staging or production
   - rollback_version: rollback production to a previous version
   - get_deployment_status: check current deployment state
@@ -14,7 +14,8 @@ Staging vs Production model:
 Run:
     python mcp-servers/deploy/server.py
 
-SSE endpoint: http://localhost:8002/sse
+Streamable HTTP endpoint:
+    POST http://localhost:8002/mcp
 """
 
 from __future__ import annotations
@@ -28,27 +29,34 @@ from pathlib import Path
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
+# Ensure project root (with agentops package) is importable when running this
+# file directly (e.g. `python mcp-servers/deploy/server.py`).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
+from agentops.settings import PROJECT_ROOT, DEPLOY_DATA_DIR, MCP_DEPLOY_PORT, CONFIGS_DIR
+
 # ---------------------------------------------------------------------------
 # Setup
 # ---------------------------------------------------------------------------
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_PROJECT_ROOT = PROJECT_ROOT
 _env_path = _PROJECT_ROOT / ".env"
 if _env_path.exists():
     load_dotenv(_env_path)
 
 _local_config_path = os.environ.get(
-    "APP_CONFIG", str(_PROJECT_ROOT / "configs" / "local.json")
+    "APP_CONFIG", str(CONFIGS_DIR / "local.json")
 )
 try:
-    _local_config = json.loads(Path(_local_config_path).read_text(encoding="utf-8"))
+    _local_config_file = Path(_local_config_path)
+    if not _local_config_file.is_absolute():
+        _local_config_file = _PROJECT_ROOT / _local_config_file
+    _local_config = json.loads(_local_config_file.read_text(encoding="utf-8"))
 except (FileNotFoundError, json.JSONDecodeError) as _exc:
     logging.getLogger(__name__).warning("Config load failed (%s), using defaults", _exc)
     _local_config = {}
 
-_data_dir = os.environ.get(
-    "DEPLOY_DATA_DIR", str(_PROJECT_ROOT / ".local-data")
-)
+_data_dir = str(DEPLOY_DATA_DIR)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,7 +69,7 @@ logger = logging.getLogger("agentops.mcp-deploy")
 # Backend
 # ---------------------------------------------------------------------------
 
-from deploy_backend import LocalDeployBackend
+from mcp_servers.deploy.deploy_backend import LocalDeployBackend
 
 _backend = LocalDeployBackend(data_dir=_data_dir, local_config=_local_config)
 
@@ -69,7 +77,7 @@ _backend = LocalDeployBackend(data_dir=_data_dir, local_config=_local_config)
 # MCP Server
 # ---------------------------------------------------------------------------
 
-_port = int(os.environ.get("MCP_DEPLOY_PORT", "8002"))
+_port = MCP_DEPLOY_PORT
 mcp = FastMCP("agentops-deploy", port=_port)
 
 

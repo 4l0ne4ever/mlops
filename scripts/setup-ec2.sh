@@ -24,16 +24,14 @@ apt-get install -y software-properties-common
 add-apt-repository -y ppa:deadsnakes/ppa
 apt-get update -y
 apt-get install -y python3.11 python3.11-venv python3.11-dev python3-pip
+echo "  System python3: $(python3 --version)"
+echo "  Python 3.11:    $(python3.11 --version)"
 
-# Set python3.11 as default python3
-update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
-
-echo "  Python version: $(python3 --version)"
-
-# --- Node.js 18 ---
+# --- Node.js LTS (configurable) ---
 echo ""
-echo "[3/6] Installing Node.js 18..."
-curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+NODE_MAJOR="${NODE_MAJOR:-20}"
+echo "[3/6] Installing Node.js ${NODE_MAJOR}.x..."
+curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash -
 apt-get install -y nodejs
 echo "  Node version: $(node --version)"
 echo "  npm version:  $(npm --version)"

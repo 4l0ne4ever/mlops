@@ -348,7 +348,7 @@ test(
 )
 
 # Functional test: time_range filtering
-from monitor_backend import LocalMonitorBackend, _cutoff_for_range
+from mcp_servers.monitor.monitor_backend import LocalMonitorBackend, _cutoff_for_range
 from datetime import datetime, timedelta, timezone
 
 _test_monitor_dir = tempfile.mkdtemp()
@@ -817,13 +817,11 @@ decision_source = (
 
 test(
     "R2-5 Decision agent does not directly import LocalDeployBackend",
-    "from deploy_backend import LocalDeployBackend" not in decision_source
-    and "import LocalDeployBackend" not in decision_source,
+    "deploy_backend" not in decision_source and "import LocalDeployBackend" not in decision_source,
 )
 test(
     "R2-5 Decision agent does not directly import LocalMonitorBackend",
-    "from monitor_backend import LocalMonitorBackend" not in decision_source
-    and "import LocalMonitorBackend" not in decision_source,
+    "monitor_backend" not in decision_source and "import LocalMonitorBackend" not in decision_source,
 )
 test(
     "R2-5 Decision agent imports MCPDeployClient",

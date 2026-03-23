@@ -181,7 +181,10 @@ def apply_rules(state: DecisionState) -> dict[str, Any]:
         critical = [
             r for r in regressions
             if r["delta"] < report.get("thresholds_used", {}).get(
-                "critical_dimension_threshold", -1.0
+                "rollback_threshold",
+                report.get("thresholds_used", {}).get(
+                    "critical_dimension_threshold", -1.0
+                ),
             )
         ]
         reasoning_parts.append(

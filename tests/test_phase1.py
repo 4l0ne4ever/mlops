@@ -20,13 +20,11 @@ import tempfile
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Resolve project root and add server paths
+# Resolve project root (mcp_servers package used for backend imports)
 # ---------------------------------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "mcp-servers" / "storage"))
-sys.path.insert(0, str(PROJECT_ROOT / "mcp-servers" / "monitor"))
-sys.path.insert(0, str(PROJECT_ROOT / "mcp-servers" / "deploy"))
+sys.path.insert(0, str(PROJECT_ROOT))
 
 # Load configs for reference values
 _local_config = json.loads(
@@ -67,7 +65,7 @@ print("\n[1/7] Storage Backend — save & get prompt version")
 _tmp_dir = tempfile.mkdtemp(prefix="agentops-test-")
 
 try:
-    from storage_backend import LocalStorageBackend
+    from mcp_servers.storage.storage_backend import LocalStorageBackend
 
     storage = LocalStorageBackend(data_dir=_tmp_dir)
 
@@ -231,7 +229,7 @@ except Exception as e:
 print("\n[4/7] Monitor Backend — metrics")
 
 try:
-    from monitor_backend import LocalMonitorBackend
+    from mcp_servers.monitor.monitor_backend import LocalMonitorBackend
 
     monitor = LocalMonitorBackend(data_dir=_tmp_dir)
 
@@ -332,7 +330,7 @@ except Exception as e:
 print("\n[6/7] Deploy Backend — deploy & rollback")
 
 try:
-    from deploy_backend import LocalDeployBackend
+    from mcp_servers.deploy.deploy_backend import LocalDeployBackend
 
     deploy = LocalDeployBackend(data_dir=_tmp_dir, local_config=_local_config)
 

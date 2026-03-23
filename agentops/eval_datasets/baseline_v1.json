@@ -1,0 +1,83 @@
+[
+    {
+        "id": "base-001",
+        "category": "simple_sentence",
+        "source_lang": "vi",
+        "target_lang": "en",
+        "input": "Trí tuệ nhân tạo đang thay đổi cách chúng ta làm việc và sống.",
+        "expected_output": "Artificial intelligence is changing the way we work and live."
+    },
+    {
+        "id": "base-002",
+        "category": "simple_sentence",
+        "source_lang": "en",
+        "target_lang": "vi",
+        "input": "The weather today is beautiful and sunny.",
+        "expected_output": "Thời tiết hôm nay đẹp và nắng."
+    },
+    {
+        "id": "base-003",
+        "category": "simple_sentence",
+        "source_lang": "vi",
+        "target_lang": "en",
+        "input": "Tôi đang học lập trình Python tại trường đại học.",
+        "expected_output": "I am studying Python programming at university."
+    },
+    {
+        "id": "base-004",
+        "category": "complex_paragraph",
+        "source_lang": "en",
+        "target_lang": "vi",
+        "input": "Machine learning models require large amounts of training data to achieve good performance. However, collecting and labeling this data can be expensive and time-consuming, especially for specialized domains like medical imaging or legal document analysis.",
+        "expected_output": "Các mô hình học máy đòi hỏi lượng lớn dữ liệu huấn luyện để đạt được hiệu suất tốt. Tuy nhiên, việc thu thập và gán nhãn dữ liệu này có thể tốn kém và mất nhiều thời gian, đặc biệt đối với các lĩnh vực chuyên biệt như hình ảnh y tế hoặc phân tích tài liệu pháp lý."
+    },
+    {
+        "id": "base-005",
+        "category": "complex_paragraph",
+        "source_lang": "vi",
+        "target_lang": "en",
+        "input": "Trong những năm gần đây, Việt Nam đã trở thành một trong những quốc gia có tốc độ phát triển kinh tế nhanh nhất khu vực Đông Nam Á. Chính phủ đã triển khai nhiều chính sách nhằm thu hút đầu tư nước ngoài và thúc đẩy đổi mới sáng tạo trong lĩnh vực công nghệ thông tin.",
+        "expected_output": "In recent years, Vietnam has become one of the fastest-growing economies in Southeast Asia. The government has implemented numerous policies aimed at attracting foreign investment and promoting innovation in the information technology sector."
+    },
+    {
+        "id": "base-006",
+        "category": "technical",
+        "source_lang": "en",
+        "target_lang": "vi",
+        "input": "The CI/CD pipeline automatically triggers a series of unit tests, integration tests, and deployment checks whenever a developer pushes code to the main branch.",
+        "expected_output": "Pipeline CI/CD tự động kích hoạt một chuỗi các bài kiểm thử đơn vị, kiểm thử tích hợp và kiểm tra triển khai mỗi khi lập trình viên đẩy mã nguồn lên nhánh chính."
+    },
+    {
+        "id": "base-007",
+        "category": "technical",
+        "source_lang": "vi",
+        "target_lang": "en",
+        "input": "Kiến trúc microservices cho phép các nhóm phát triển độc lập triển khai và mở rộng từng dịch vụ riêng lẻ mà không ảnh hưởng đến toàn bộ hệ thống.",
+        "expected_output": "Microservices architecture allows development teams to independently deploy and scale individual services without affecting the entire system."
+    },
+    {
+        "id": "base-008",
+        "category": "simple_sentence",
+        "source_lang": "en",
+        "target_lang": "vi",
+        "input": "Please submit your report before the deadline on Friday.",
+        "expected_output": "Vui lòng nộp báo cáo của bạn trước hạn chót vào thứ Sáu."
+    },
+    {
+        "id": "base-009",
+        "category": "complex_paragraph",
+        "source_lang": "en",
+        "target_lang": "vi",
+        "input": "Prompt engineering has emerged as a critical skill for working with large language models. By carefully crafting the instructions and context provided to the model, developers can significantly improve the quality and consistency of generated outputs without modifying the underlying model weights.",
+        "expected_output": "Kỹ thuật thiết kế prompt đã trở thành một kỹ năng quan trọng khi làm việc với các mô hình ngôn ngữ lớn. Bằng cách thiết kế cẩn thận các hướng dẫn và ngữ cảnh cung cấp cho mô hình, các nhà phát triển có thể cải thiện đáng kể chất lượng và tính nhất quán của các kết quả đầu ra mà không cần thay đổi trọng số của mô hình."
+    },
+    {
+        "id": "base-010",
+        "category": "technical",
+        "source_lang": "vi",
+        "target_lang": "en",
+        "input": "Model Context Protocol (MCP) cung cấp một giao thức chuẩn hóa cho việc khám phá và gọi công cụ mà các tác nhân AI có thể hiểu một cách tự nhiên, cho phép tác nhân tự quyết định sử dụng công cụ nào dựa trên ngữ cảnh.",
+        "expected_output": "Model Context Protocol (MCP) provides a standardized protocol for tool discovery and invocation that AI agents can understand natively, allowing agents to autonomously decide which tools to use based on context."
+    }
+]
+

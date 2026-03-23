@@ -38,6 +38,13 @@ SSH_KEY="${2:-~/.ssh/agentops-key.pem}"
 EC2_USER="ubuntu"
 REMOTE_DIR="/opt/agentops"
 
+# Shared ports (should align with agentops.settings defaults)
+TARGET_APP_PROD_PORT="${TARGET_APP_PROD_PORT:-9000}"
+TARGET_APP_STAGING_PORT="${TARGET_APP_STAGING_PORT:-9001}"
+MCP_STORAGE_PORT="${MCP_STORAGE_PORT:-8000}"
+MCP_MONITOR_PORT="${MCP_MONITOR_PORT:-8001}"
+MCP_DEPLOY_PORT="${MCP_DEPLOY_PORT:-8002}"
+
 echo "=============================================="
 echo "AgentOps — Deploy to EC2"
 echo "  Host: $EC2_USER@$EC2_IP"
@@ -101,6 +108,7 @@ PYTHON=python3.11
 setup_svc() {
     local dir="$1"
     local name="$2"
+    local req_file="${3:-requirements.txt}"
     echo "  [$name] Setting up..."
     if [ ! -d "$dir" ]; then
         echo "    SKIP: $dir not found"
@@ -111,9 +119,9 @@ setup_svc() {
         $PYTHON -m venv venv
         echo "    Created venv"
     fi
-    if [ -f requirements.txt ]; then
+    if [ -f "$req_file" ]; then
         venv/bin/pip install --upgrade pip -q 2>/dev/null
-        venv/bin/pip install -r requirements.txt -q 2>/dev/null
+        venv/bin/pip install -r "$req_file" -q 2>/dev/null
         echo "    Installed deps"
     fi
     cd "$REMOTE_DIR"
@@ -123,7 +131,22 @@ setup_svc "target-app" "Target App"
 setup_svc "mcp-servers/storage" "MCP Storage"
 setup_svc "mcp-servers/monitor" "MCP Monitor"
 setup_svc "mcp-servers/deploy" "MCP Deploy"
+setup_svc "agents/orchestrator" "Orchestrator" "$REMOTE_DIR/agents/requirements.txt"
 setup_svc "poc" "POC Spike"
+
+# Dashboard (Node.js app)
+if [ -d "$REMOTE_DIR/dashboard" ]; then
+    echo "  [Dashboard] Setting up..."
+    cd "$REMOTE_DIR/dashboard"
+    if [ -f package-lock.json ]; then
+        npm ci --no-audit --no-fund >/dev/null
+    else
+        npm install --no-audit --no-fund >/dev/null
+    fi
+    npm run build >/dev/null
+    echo "    Installed deps + built production bundle"
+    cd "$REMOTE_DIR"
+fi
 
 echo "  ✅ All venvs ready"
 SETUP_VENVS
@@ -155,6 +178,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/opt/agentops/target-app
 Environment=APP_CONFIG=/opt/agentops/configs/production.json
+Environment=PYTHONPATH=/opt/agentops
 EnvironmentFile=/opt/agentops/.env
 ExecStart=/opt/agentops/target-app/venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 9000
 Restart=always
@@ -177,6 +201,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/opt/agentops/target-app
 Environment=APP_CONFIG=/opt/agentops/configs/production.json
+Environment=PYTHONPATH=/opt/agentops
 EnvironmentFile=/opt/agentops/.env
 ExecStart=/opt/agentops/target-app/venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 9001
 Restart=always
@@ -257,6 +282,49 @@ sudo ln -sf /etc/nginx/sites-available/agentops /etc/nginx/sites-enabled/agentop
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 
+# Orchestrator Service (run from project root so "agents" is on sys.path)
+sudo tee /etc/systemd/system/agentops-orchestrator.service > /dev/null << 'SVC'
+[Unit]
+Description=AgentOps Orchestrator Agent
+After=network.target agentops-mcp-storage.service agentops-mcp-monitor.service agentops-mcp-deploy.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/agentops
+Environment=PYTHONPATH=/opt/agentops
+EnvironmentFile=/opt/agentops/.env
+ExecStart=/opt/agentops/agents/orchestrator/venv/bin/python -m agents.orchestrator.agent --serve --port 7000
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/agentops/orchestrator.log
+StandardError=append:/var/log/agentops/orchestrator.error.log
+
+[Install]
+WantedBy=multi-user.target
+SVC
+
+# Dashboard Service
+sudo tee /etc/systemd/system/agentops-dashboard.service > /dev/null << 'SVC'
+[Unit]
+Description=AgentOps Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/agentops/dashboard
+EnvironmentFile=/opt/agentops/.env
+ExecStart=/usr/bin/npm run start -- --hostname 0.0.0.0 --port 3000
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/agentops/dashboard.log
+StandardError=append:/var/log/agentops/dashboard.error.log
+
+[Install]
+WantedBy=multi-user.target
+SVC
+
 # Reload systemd
 sudo systemctl daemon-reload
 
@@ -276,6 +344,8 @@ SERVICES=(
     agentops-mcp-storage
     agentops-mcp-monitor
     agentops-mcp-deploy
+    agentops-orchestrator
+    agentops-dashboard
 )
 
 for svc in "${SERVICES[@]}"; do
@@ -290,7 +360,14 @@ sleep 5
 echo ""
 echo "  Service status:"
 for svc in "${SERVICES[@]}"; do
-    STATUS=$(systemctl is-active "$svc" 2>/dev/null || echo "inactive")
+    STATUS=""
+    for _ in {1..6}; do
+        STATUS=$(systemctl is-active "$svc" 2>/dev/null || echo "inactive")
+        if [ "$STATUS" = "active" ]; then
+            break
+        fi
+        sleep 2
+    done
     if [ "$STATUS" = "active" ]; then
         echo "    ✅ $svc: $STATUS"
     else

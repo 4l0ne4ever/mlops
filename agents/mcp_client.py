@@ -11,7 +11,8 @@ Usage:
     test_cases = client.load_test_cases("eval-datasets/baseline_v1.json")
     client.save_eval_result(run_id, version_id, scores, details)
 
-The client tries MCP server first (POST http://localhost:{port}/mcp),
+The client tries MCP server first using the streamable-http session flow
+(`initialize` -> `mcp-session-id` -> `notifications/initialized` -> `tools/call`),
 then falls back to direct local storage when allowed.
 """
 
@@ -32,6 +33,12 @@ _MCP_JSON_RPC_HEADERS = {
     "Accept": "application/json, text/event-stream",
 }
 _RPC_VERSION = "2.0"
+_MCP_PROTOCOL_VERSION = "2024-11-05"
+_MCP_SESSION_HEADER = "mcp-session-id"
+_MCP_CLIENT_INFO = {
+    "name": "agentops-agents",
+    "version": "0.1.0",
+}
 
 
 def _is_truthy(value: str | None) -> bool:
@@ -95,6 +102,117 @@ def _parse_mcp_response(data: Any) -> Any:
         return result
     return data
 
+
+def _parse_sse_payload(body: str) -> Any:
+    data_lines = [
+        line[5:].strip()
+        for line in body.splitlines()
+        if line.startswith("data:")
+    ]
+    if not data_lines:
+        return None
+    return json.loads(data_lines[-1])
+
+
+def _parse_mcp_http_body(response: httpx.Response) -> Any:
+    content_type = response.headers.get("content-type", "")
+
+    if "application/json" in content_type:
+        return response.json()
+
+    body = response.text
+    if "text/event-stream" in content_type:
+        return _parse_sse_payload(body)
+
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError:
+        return body
+
+
+def _initialize_mcp_session(client: httpx.Client, server_url: str, label: str) -> str:
+    url = f"{server_url}/mcp"
+    initialize_response = client.post(
+        url,
+        json={
+            "jsonrpc": _RPC_VERSION,
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": _MCP_PROTOCOL_VERSION,
+                "capabilities": {},
+                "clientInfo": _MCP_CLIENT_INFO,
+            },
+        },
+        headers=_MCP_JSON_RPC_HEADERS,
+    )
+    if not initialize_response.is_success:
+        raise RuntimeError(
+            f"{label} initialize failed: HTTP {initialize_response.status_code}"
+        )
+
+    session_id = initialize_response.headers.get(_MCP_SESSION_HEADER)
+    if not session_id:
+        raise RuntimeError(f"{label} initialize failed: missing session ID")
+
+    _parse_mcp_response(_parse_mcp_http_body(initialize_response))
+
+    initialized_response = client.post(
+        url,
+        json={
+            "jsonrpc": _RPC_VERSION,
+            "method": "notifications/initialized",
+            "params": {},
+        },
+        headers={
+            **_MCP_JSON_RPC_HEADERS,
+            _MCP_SESSION_HEADER: session_id,
+        },
+    )
+    if not initialized_response.is_success:
+        raise RuntimeError(
+            f"{label} initialized notification failed: HTTP {initialized_response.status_code}"
+        )
+
+    return session_id
+
+
+def _call_mcp_tool_http(
+    client: httpx.Client,
+    server_url: str,
+    tool_name: str,
+    arguments: dict[str, Any],
+    label: str,
+) -> Any:
+    url = f"{server_url}/mcp"
+
+    def execute(session_id: str) -> httpx.Response:
+        return client.post(
+            url,
+            json={
+                "jsonrpc": _RPC_VERSION,
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": tool_name, "arguments": arguments},
+            },
+            headers={
+                **_MCP_JSON_RPC_HEADERS,
+                _MCP_SESSION_HEADER: session_id,
+            },
+        )
+
+    session_id = _initialize_mcp_session(client, server_url, label)
+    response = execute(session_id)
+
+    if response.status_code == 400:
+        session_id = _initialize_mcp_session(client, server_url, label)
+        response = execute(session_id)
+
+    if not response.is_success:
+        raise RuntimeError(f"{label} failed: HTTP {response.status_code}")
+
+    return _parse_mcp_response(_parse_mcp_http_body(response))
+
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -121,9 +239,7 @@ class MCPStorageClient:
     def _get_fallback_backend(self):
         """Lazy-load the direct storage backend as fallback."""
         if self._backend is None:
-            import sys
-            sys.path.insert(0, str(_PROJECT_ROOT / "mcp-servers" / "storage"))
-            from storage_backend import LocalStorageBackend
+            from mcp_servers.storage.storage_backend import LocalStorageBackend  # type: ignore[reportMissingImports]
 
             data_dir = os.environ.get(
                 "STORAGE_DATA_DIR", str(_PROJECT_ROOT / ".local-data")
@@ -147,24 +263,19 @@ class MCPStorageClient:
         """
         Call an MCP tool via the MCP Streamable-HTTP transport (JSON-RPC 2.0).
 
-        POSTs to ``/mcp`` (the standard FastMCP streamable-http endpoint) with
-        a JSON-RPC 2.0 ``tools/call`` request.  The server returns either a
-        direct JSON-RPC response or an SSE stream; the ``Accept`` header asks
-        for plain JSON so we get a synchronous response body.
+        FastMCP streamable-http requires a short session handshake before each
+        tool call: ``initialize`` -> ``mcp-session-id`` ->
+        ``notifications/initialized`` -> ``tools/call``.
         """
         try:
-            url = f"{self._storage_url}/mcp"
-            payload = {
-                "jsonrpc": _RPC_VERSION,
-                "id": 1,
-                "method": "tools/call",
-                "params": {"name": tool_name, "arguments": arguments},
-            }
             client = self._get_http_client()
-            resp = client.post(url, json=payload, headers=_MCP_JSON_RPC_HEADERS)
-            if resp.status_code == 200:
-                return _parse_mcp_response(resp.json())
-            raise Exception(f"MCP call failed: HTTP {resp.status_code}")
+            return _call_mcp_tool_http(
+                client,
+                self._storage_url,
+                tool_name,
+                arguments,
+                f"MCP storage.{tool_name}",
+            )
         except (httpx.ConnectError, httpx.TimeoutException, OSError) as exc:
             logger.debug("MCP server unavailable (%s), using fallback", exc)
             raise
@@ -382,9 +493,7 @@ class MCPDeployClient:
 
     def _get_fallback_backend(self):
         if self._backend is None:
-            import sys
-            sys.path.insert(0, str(_PROJECT_ROOT / "mcp-servers" / "deploy"))
-            from deploy_backend import LocalDeployBackend
+            from mcp_servers.deploy.deploy_backend import LocalDeployBackend  # type: ignore[reportMissingImports]
 
             config_path = os.environ.get(
                 "APP_CONFIG", str(_PROJECT_ROOT / "configs" / "local.json")
@@ -415,18 +524,14 @@ class MCPDeployClient:
 
     def _call_mcp_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         try:
-            url = f"{self._deploy_url}/mcp"
-            payload = {
-                "jsonrpc": _RPC_VERSION,
-                "id": 1,
-                "method": "tools/call",
-                "params": {"name": tool_name, "arguments": arguments},
-            }
             client = self._get_http_client()
-            resp = client.post(url, json=payload, headers=_MCP_JSON_RPC_HEADERS)
-            if resp.status_code == 200:
-                return _parse_mcp_response(resp.json())
-            raise Exception(f"MCP deploy call failed: HTTP {resp.status_code}")
+            return _call_mcp_tool_http(
+                client,
+                self._deploy_url,
+                tool_name,
+                arguments,
+                f"MCP deploy.{tool_name}",
+            )
         except (httpx.ConnectError, httpx.TimeoutException, OSError) as exc:
             logger.debug("MCP deploy server unavailable (%s), using fallback", exc)
             raise
@@ -490,9 +595,7 @@ class MCPMonitorClient:
 
     def _get_fallback_backend(self):
         if self._backend is None:
-            import sys
-            sys.path.insert(0, str(_PROJECT_ROOT / "mcp-servers" / "monitor"))
-            from monitor_backend import LocalMonitorBackend
+            from mcp_servers.monitor.monitor_backend import LocalMonitorBackend  # type: ignore[reportMissingImports]
 
             data_dir = os.environ.get(
                 "MONITOR_DATA_DIR", str(_PROJECT_ROOT / ".local-data")
@@ -511,18 +614,14 @@ class MCPMonitorClient:
 
     def _call_mcp_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         try:
-            url = f"{self._monitor_url}/mcp"
-            payload = {
-                "jsonrpc": _RPC_VERSION,
-                "id": 1,
-                "method": "tools/call",
-                "params": {"name": tool_name, "arguments": arguments},
-            }
             client = self._get_http_client()
-            resp = client.post(url, json=payload, headers=_MCP_JSON_RPC_HEADERS)
-            if resp.status_code == 200:
-                return _parse_mcp_response(resp.json())
-            raise Exception(f"MCP monitor call failed: HTTP {resp.status_code}")
+            return _call_mcp_tool_http(
+                client,
+                self._monitor_url,
+                tool_name,
+                arguments,
+                f"MCP monitor.{tool_name}",
+            )
         except (httpx.ConnectError, httpx.TimeoutException, OSError) as exc:
             logger.debug("MCP monitor server unavailable (%s), using fallback", exc)
             raise

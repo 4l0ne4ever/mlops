@@ -712,8 +712,8 @@ if spec_path.exists():
 # Verify thresholds.json has all required fields
 thresholds = json.loads(thresholds_path.read_text(encoding="utf-8"))
 required_threshold_keys = [
-    "overall_regression_threshold",
-    "critical_dimension_threshold",
+    "escalate_threshold",
+    "rollback_threshold",
     "auto_promote_threshold",
     "per_dimension_weights",
     "test_case_pass_threshold",
@@ -721,6 +721,7 @@ required_threshold_keys = [
     "judge_temperature",
     "judge_passes",
     "judge_anomaly_threshold",
+    "judge_prompt_variant",
 ]
 for key in required_threshold_keys:
     test(f"thresholds.json has '{key}'", key in thresholds)
@@ -909,14 +910,32 @@ finally:
 
 # Test MCP transport uses JSON-RPC 2.0 over /mcp (not /call-tool)
 mock_http = MagicMock()
-mock_http.post.return_value.status_code = 200
-mock_http.post.return_value.json.return_value = {
+init_response = MagicMock()
+init_response.status_code = 200
+init_response.headers = {
+    "mcp-session-id": "test-session",
+    "content-type": "application/json",
+}
+init_response.json.return_value = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {"protocolVersion": "2024-11-05", "capabilities": {}},
+}
+initialized_response = MagicMock()
+initialized_response.status_code = 200
+initialized_response.headers = {"content-type": "application/json"}
+initialized_response.json.return_value = {}
+tool_response = MagicMock()
+tool_response.status_code = 200
+tool_response.headers = {"content-type": "application/json"}
+tool_response.json.return_value = {
     "jsonrpc": "2.0",
     "id": 1,
     "result": {
         "content": [{"type": "text", "text": json.dumps({"ok": True})}],
     },
 }
+mock_http.post.side_effect = [init_response, initialized_response, tool_response]
 rpc_client = MCPStorageClient(storage_url="http://localhost:8000")
 with patch.object(rpc_client, "_get_http_client", return_value=mock_http):
     rpc_result = rpc_client._call_mcp_tool("list_versions", {"limit": 5})
@@ -940,6 +959,13 @@ test(
     "MCP JSON-RPC call parses content result",
     rpc_result == {"ok": True},
     f"got {rpc_result}",
+)
+test(
+    "MCP client initializes session before tools/call",
+    mock_http.post.call_args_list[0].kwargs.get("json", {}).get("method") == "initialize"
+    and mock_http.post.call_args_list[1].kwargs.get("json", {}).get("method") == "notifications/initialized"
+    and mock_http.post.call_args_list[2].kwargs.get("json", {}).get("method") == "tools/call",
+    f"got {[call.kwargs.get('json', {}).get('method') for call in mock_http.post.call_args_list]}",
 )
 
 # In production, MCP failures should fail closed unless fallback is explicitly allowed
@@ -1452,7 +1478,7 @@ er_eval_src = inspect.getsource(er_agent.evaluate_outputs)
 test(
     "#3 evaluate_outputs uses QualityScoreCalculator for threshold",
     "QualityScoreCalculator" in er_eval_src
-    and "calculator._pass_threshold" in er_eval_src,
+    and "calculator.pass_threshold" in er_eval_src,
 )
 test(
     "#3 No hardcoded 6.0 threshold in evaluate_outputs",

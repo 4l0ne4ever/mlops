@@ -36,10 +36,7 @@ if _env_path.exists():
 else:
     load_dotenv()
 
-# Add storage backend to path
-sys.path.insert(0, str(PROJECT_ROOT / "mcp-servers" / "storage"))
-
-from storage_backend import LocalStorageBackend  # noqa: E402
+from mcp_servers.storage.storage_backend import LocalStorageBackend
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -162,14 +159,12 @@ def main() -> None:
     print("\n[3/3] Setting production deployment...")
 
     # We use the deploy backend to record this
-    sys.path.insert(0, str(PROJECT_ROOT / "mcp-servers" / "deploy"))
-
     _local_config_path = os.environ.get(
         "APP_CONFIG", str(PROJECT_ROOT / "configs" / "local.json")
     )
     _local_config = json.loads(Path(_local_config_path).read_text(encoding="utf-8"))
 
-    from deploy_backend import LocalDeployBackend  # noqa: E402
+    from mcp_servers.deploy.deploy_backend import LocalDeployBackend
 
     deploy_backend = LocalDeployBackend(data_dir=DATA_DIR, local_config=_local_config)
     deploy_result = deploy_backend.deploy_version(version_id, "production")

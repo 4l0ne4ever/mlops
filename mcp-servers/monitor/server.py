@@ -1,7 +1,7 @@
 """
 MCP Server: Monitor — metrics, logs, and health checks.
 
-Exposes 4 MCP tools via SSE transport:
+Exposes 4 MCP tools via the **streamable-http** `/mcp` endpoint:
   - push_metric: record a custom metric datapoint
   - get_metrics: retrieve metric history
   - get_logs: retrieve log entries with optional filter
@@ -10,7 +10,11 @@ Exposes 4 MCP tools via SSE transport:
 Run:
     python mcp-servers/monitor/server.py
 
-SSE endpoint: http://localhost:8001/sse
+Streamable HTTP endpoint:
+    POST http://localhost:8001/mcp
+
+Use the standard streamable-http MCP handshake as documented in
+`docs/mcp-integration-guide.md`.
 """
 
 from __future__ import annotations
@@ -26,18 +30,22 @@ import httpx
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
+# Ensure project root (with agentops package) is importable when running this
+# file directly (e.g. `python mcp-servers/monitor/server.py`).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
+from agentops.settings import PROJECT_ROOT, MONITOR_DATA_DIR, MCP_MONITOR_PORT
+
 # ---------------------------------------------------------------------------
 # Setup
 # ---------------------------------------------------------------------------
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_PROJECT_ROOT = PROJECT_ROOT
 _env_path = _PROJECT_ROOT / ".env"
 if _env_path.exists():
     load_dotenv(_env_path)
 
-_data_dir = os.environ.get(
-    "MONITOR_DATA_DIR", str(_PROJECT_ROOT / ".local-data")
-)
+_data_dir = str(MONITOR_DATA_DIR)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,7 +58,7 @@ logger = logging.getLogger("agentops.mcp-monitor")
 # Backend
 # ---------------------------------------------------------------------------
 
-from monitor_backend import LocalMonitorBackend
+from mcp_servers.monitor.monitor_backend import LocalMonitorBackend
 
 _backend = LocalMonitorBackend(data_dir=_data_dir)
 
@@ -58,7 +66,7 @@ _backend = LocalMonitorBackend(data_dir=_data_dir)
 # MCP Server
 # ---------------------------------------------------------------------------
 
-_port = int(os.environ.get("MCP_MONITOR_PORT", "8001"))
+_port = MCP_MONITOR_PORT
 mcp = FastMCP("agentops-monitor", port=_port)
 
 
